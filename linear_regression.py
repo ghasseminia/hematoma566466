@@ -3,15 +3,30 @@ import numpy as np
 import sys
 
 def computeCost (X,y,theta):
-    m=65
+    m = len(y)
     p1 = np.matmul(X,theta)-y
     p2 = p1.transpose()
-    J = np.matmul(p2,p1)/(2*m)
-    print("J: ",J)
+    J=np.matmul(p2,p1)/(2*m)
+        # print("J: ",J)
     return J
-
-
-
+#############################################
+def gradient_descent(X,y,theta,alpha,num_iters):
+    m = len(y)
+    J_history=np.zeros((num_iters,1))
+    for i in range(0,num_iters):
+        temp=np.matmul(X,theta)
+        error=temp-y
+        new_X=np.matmul( error.transpose(),X )
+        theta_temp= ( (alpha/m)*new_X.transpose() )
+        theta= theta-theta_temp;
+        J_history[i][0]=computeCost (X,y,theta)
+    if i!=0 and i!=1:
+        if J_history[i][0]-J_history[i-1][0]<0.01: 
+            print("convergence criterion is satisfied")
+    return(J_history,theta)
+######################################################        
+    
+       
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
 MAXROW = 76
 SELECTED = ['E','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AZ']
@@ -19,7 +34,6 @@ std_col = ['G','J','M','AI','AL','AO']
 wb = opxl.load_workbook("linear_table_edited.xlsx")
 data_set = wb['Sheet3']
 std_sheet = wb['Sheet4']
-
 X_matrix = []
 for y in range(2,MAXROW+1):
     row = []
@@ -69,6 +83,11 @@ print(theta.shape)
 ones = np.full((65,1),1)
 X_matrix = np.hstack((ones,X_matrix))
 #print(X_matrix)
+alpha=0.00001
+num_iters=10000
 
-computeCost(X_matrix,y_zero,theta)
-
+(J_history,theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
+error= ( y_zero-np.matmul(X_matrix,theta) / y_zero )*100
+print(error)
+print("you can find the percentage of error using method of linear regression for 65 patients in the vector that was printed above")
+print("convergence criterion for J is satisfied")
