@@ -2,7 +2,6 @@
 import openpyxl as opxl
 import numpy as np
 import sys
-import matplotlib as plt
 
 def computeCost (X,y,theta):
     m = len(y)
@@ -19,6 +18,7 @@ def gradient_descent(X,y,theta,alpha,num_iters):
         temp=np.matmul(X,theta)
         #print(temp, temp.shape)
         error=temp-y
+        print(theta)
         new_X=np.matmul(X.transpose(),error )
         theta_temp= ( (alpha/m)*new_X )
         #print(theta_temp)
@@ -35,47 +35,30 @@ def gradient_descent(X,y,theta,alpha,num_iters):
     
        
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
-MAXROW = 76
-SELECTED = ['E','D','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AZ']
-std_col = ['G','J','M','AI','AL','AO']
-wb = opxl.load_workbook("linear_table_edited.xlsx")
-data_set = wb['Sheet3']
-std_sheet = wb['Sheet4']
+MAXROW = 97
+SELECTED = ['A']
+std_col = ['A']
+wb = opxl.load_workbook("textdataHematoma.xlsx")#"linear_table_edited.xlsx")
+data_set = wb['Sheet1']
+std_sheet = wb['Sheet2']
 X_matrix = []
-for y in range(2,MAXROW+1):
+for y in range(1,MAXROW+1):
     row = []
-    if y!=8 and y!=13 and y!=23 and y!=32 and y!=44 and y!=50 and y!=53 and y!=55 and y!= 58 and y!= 67:
-        for x in SELECTED:
-            #print(x+str(y))
-            cell_idx = x+str(y)
-            # print(cell_idx)
-            row.append(float(data_set[cell_idx].value))
+    
+    for x in SELECTED:
+        #print(x+str(y))
+        cell_idx = x+str(y)
+        # print(cell_idx)
+        row.append(float(data_set[cell_idx].value))
         # print(row)
-        X_matrix.append(row)
+    X_matrix.append(row)
 
 X_matrix = np.matrix(X_matrix)
 y_zero = []
-for y in range(2,MAXROW+1):
-    if y!=8 and y!=13 and y!=23 and y!=32 and y!=44 and y!=50 and y!=53 and y!=55 and y!= 58 and y!= 67:
-        """
-        cell_idx = 'G'+str(y)
-        IPH_0hr = float(std_sheet[cell_idx].value)
-        cell_idx = 'J'+str(y)
-        IVH_0hr = float(std_sheet[cell_idx].value)
-        """
-        cell_idx = 'M'+str(y)
-        ICH_0hr = float(std_sheet[cell_idx].value)
-        """
-        cell_idx = 'AI'+str(y)
-        IPH_24hr = float(std_sheet[cell_idx].value)
-        cell_idx = 'AL'+str(y)
-        IVH_24hr = float(std_sheet[cell_idx].value)
-        """
-        cell_idx = 'AO'+str(y)
-        ICH_24hr = float(std_sheet[cell_idx].value)
-
-        diff = ICH_24hr-(ICH_0hr)
-        y_zero.append(diff)
+for y in range(1,MAXROW+1):
+    cell_idx = 'A'+str(y)
+    ICH_0hr = float(std_sheet[cell_idx].value)
+    y_zero.append(ICH_0hr)
         # print("row: ",y)
         # print(diff)
         # cell_idx = 'G'+str(y)
@@ -86,22 +69,23 @@ y_zero = np.transpose(y_zero)
 # print(matrix.shape)
 print("Y dimension:",y_zero.shape)
 # print(y_zero.shape)
+#print(X_matrix)
+#print(y_zero)
 
-theta = np.full((25,1),1)
+theta = np.full((2,1),1)
 print(theta.shape)
 
-ones = np.full((65,1),1)
+ones = np.full((97,1),1)
 X_matrix = np.hstack((ones,X_matrix))
 #print(X_matrix)
-alpha=0.00001
-num_iters=10000
+alpha=0.3
+num_iters=1500
 
 (J_history,theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
 #print(X_matrix)
 #print(theta)
 #print(y_zero)
 error= ( y_zero-np.matmul(X_matrix,theta) / y_zero )*100
-#print(np.matmul(X_matrix,theta))
-plt.plot(np.matmul(X_matrix,theta)
+print(np.matmul(X_matrix,theta))
 print("you can find the percentage of error using method of linear regression for 65 patients in the vector that was printed above")
 #print("convergence criterion for J is satisfied")
