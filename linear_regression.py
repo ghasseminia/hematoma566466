@@ -2,7 +2,25 @@
 import openpyxl as opxl
 import numpy as np
 import sys
-import matplotlib as plt
+#import matplotlib as plt
+def computeBinary(difference):	 
+	m = len(difference)
+	binary = np.zeros((m,1))
+	for i in range(m):
+		# if 33% increase or 6ml increase we classify as growth
+		if (difference[i] > 6) or (difference[i] > initial_volumes[i]*0.33):
+			binary[i] = 1.0
+	return binary		
+		
+def accuracy(binary):
+	binary = np.absolute(binary)
+	incorrect = np.sum(binary)
+	correct = len(binary) - incorrect
+	accuracy = correct/len(binary)
+	return accuracy
+		
+		
+	
 
 def computeCost (X,y,theta):
     m = len(y)
@@ -55,6 +73,8 @@ for y in range(2,MAXROW+1):
 
 X_matrix = np.matrix(X_matrix)
 y_zero = []
+initial_volumes = []
+end_volumes = []
 for y in range(2,MAXROW+1):
     if y!=8 and y!=13 and y!=23 and y!=32 and y!=44 and y!=50 and y!=53 and y!=55 and y!= 58 and y!= 67:
         """
@@ -75,17 +95,23 @@ for y in range(2,MAXROW+1):
         ICH_24hr = float(std_sheet[cell_idx].value)
 
         diff = ICH_24hr-(ICH_0hr)
+        initial_volumes.append(ICH_0hr)
+        end_volumes.append(ICH_24hr)
         y_zero.append(diff)
         # print("row: ",y)
         # print(diff)
         # cell_idx = 'G'+str(y)
         # print(float(std_sheet[cell_idx].value))
 #print(matrix)
+initial_volumes = np.matrix(initial_volumes)
+initial_volumes = np.transpose(initial_volumes)
+end_volumes = np.matrix(end_volumes)
+end_volumes = np.transpose(end_volumes)
 y_zero = np.matrix(y_zero)
 y_zero = np.transpose(y_zero)
 # print(matrix.shape)
 print("Y dimension:",y_zero.shape)
-# print(y_zero.shape)
+#print(y_zero.shape)
 
 theta = np.full((25,1),1)
 print(theta.shape)
@@ -93,15 +119,22 @@ print(theta.shape)
 ones = np.full((65,1),1)
 X_matrix = np.hstack((ones,X_matrix))
 #print(X_matrix)
-alpha=0.00001
+alpha=0.0000001
 num_iters=10000
 
 (J_history,theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
 #print(X_matrix)
-#print(theta)
-#print(y_zero)
-error= ( y_zero-np.matmul(X_matrix,theta) / y_zero )*100
 #print(np.matmul(X_matrix,theta))
-plt.plot(np.matmul(X_matrix,theta)
-print("you can find the percentage of error using method of linear regression for 65 patients in the vector that was printed above")
+#print(y_zero)
+#error= ( y_zero-np.matmul(X_matrix,theta) / y_zero )*100
+original_binary = computeBinary(y_zero)
+learned_binary = computeBinary(np.matmul(X_matrix,theta))
+percent = accuracy(original_binary-learned_binary)
+message = "%.2f%% accuracy on the training data" % percent
+print(message)
+#print(original_binary)
+#print(learned_binary)
+#print(np.matmul(X_matrix,theta))
+#plt.plot(np.matmul(X_matrix,theta))
+#print("you can find the percentage of error using method of linear regression for 65 patients in the vector that was printed above")
 #print("convergence criterion for J is satisfied")
