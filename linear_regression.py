@@ -2,13 +2,14 @@
 import openpyxl as opxl
 import numpy as np
 import sys
+from sklearn.model_selection import KFold
 #import matplotlib as plt
-def computeBinary(difference):	 
+def computeBinary(difference,initial):	 
 	m = len(difference)
 	binary = np.zeros((m,1))
 	for i in range(m):
 		# if 33% increase or 6ml increase we classify as growth
-		if (difference[i] > 6) or (difference[i] > initial_volumes[i]*0.33):
+		if (difference[i] > 6) or (difference[i] > initial[i]*0.33):
 			binary[i] = 1.0
 	return binary		
 		
@@ -49,8 +50,9 @@ def gradient_descent(X,y,theta,alpha,num_iters):
         if J_history[i][0]-J_history[i-1][0]< alpha: 
             print("convergence criterion is satisfied")
     return(J_history,theta)
-######################################################        
-    
+###################################################### 
+splits = 5      
+kfold = KFold(splits, True, 1)  
        
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
 MAXROW = 76
@@ -110,31 +112,48 @@ end_volumes = np.transpose(end_volumes)
 y_zero = np.matrix(y_zero)
 y_zero = np.transpose(y_zero)
 # print(matrix.shape)
-print("Y dimension:",y_zero.shape)
-#print(y_zero.shape)
 
-theta = np.full((25,1),1)
-print(theta.shape)
-
-ones = np.full((65,1),1)
-X_matrix = np.hstack((ones,X_matrix))
-#print(X_matrix)
+# enumerate splits
+split_data = kfold.split(X_matrix)
 alpha=0.0000001
 num_iters=10000
+ones = np.full((65,1),1)
+X_matrix = np.hstack((ones,X_matrix))
+all_thetas = []
+iter = 0
+# train is a set of current training index
+# test is a set of current testing indec
+for train, test in split_data:
+	iter += 1
+	current_theta = np.full((25,1),1)
+	current_X = np.matrix(X_matrix)
+	current_X = current_X[train,:]	# data set of selected training data
+	current_Y = y_zero[train,:]		# difference for selected training data
+	test_X = np.matrix(X_matrix)
+	test_X = test_X[test,:]		# data set of selected testing data
+	test_Y = y_zero[test,:]		# difference for selected testing data
+	(J_history,current_theta)= gradient_descent(current_X,current_Y,current_theta,alpha,num_iters)
+	all_thetas.append(current_theta)
+	test_difference = np.matmul(test_X,current_theta)
+	original_binary = computeBinary(y_zero[test,:],initial_volumes[test,:])	# classification using given data
+	learned_binary = computeBinary(test_difference,initial_volumes[test,:])
+	percent = accuracy(original_binary-learned_binary)
+	message = "%.2f%% accuracy on the training data" % percent	# accuracy for each iteration
+	print(iter, "iteration")
+	print(message)
+	
+#print("Y dimension:",y_zero.shape)
+average_thetas = np.zeros((len(all_thetas[0]),1))
+for i in range(splits):
+	for j in range(len(all_thetas[0])):
+		average_thetas[j] = average_thetas[j]+ all_thetas[i][j,0]
+average_thetas /= splits		# cross validates among 5 splits
 
-(J_history,theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
-#print(X_matrix)
-#print(np.matmul(X_matrix,theta))
-#print(y_zero)
-#error= ( y_zero-np.matmul(X_matrix,theta) / y_zero )*100
-original_binary = computeBinary(y_zero)
-learned_binary = computeBinary(np.matmul(X_matrix,theta))
-percent = accuracy(original_binary-learned_binary)
-message = "%.2f%% accuracy on the training data" % percent
+final_difference = np.matmul(X_matrix,average_thetas)
+final_original_binary = computeBinary(y_zero,initial_volumes)	# classification using given data
+final_learned_binary = computeBinary(final_difference,initial_volumes)
+percent = accuracy(final_original_binary-final_learned_binary)
+message = "%.2f%% accuracy on the all data" % percent	# accuracy for each iteration
+print("\nfinal iteration")
 print(message)
-#print(original_binary)
-#print(learned_binary)
-#print(np.matmul(X_matrix,theta))
-#plt.plot(np.matmul(X_matrix,theta))
-#print("you can find the percentage of error using method of linear regression for 65 patients in the vector that was printed above")
-#print("convergence criterion for J is satisfied")
+
