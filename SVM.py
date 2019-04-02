@@ -3,7 +3,9 @@ import openpyxl as opxl
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
-from sklearn import svm
+import optunity
+import optunity.metrics
+import sklearn.svm
  
 #import matplotlib as plt
 def computeBinary(difference,initial):	 
@@ -99,7 +101,7 @@ end_volumes = np.transpose(end_volumes)
 y_zero = np.matrix(y_zero)
 y_zero = np.transpose(y_zero)
 y_binary = computeBinary(y_zero,initial_volumes)
-print(y_binary)
+#print(y_binary)
 # print(matrix.shape)
 
 '''alpha=0.0000001
@@ -113,6 +115,27 @@ min = 100
 minC = 0
 
 
+
+
+# score function: twice iterated 10-fold cross-validated accuracy
+@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=2, num_iter=2)
+def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
+    model = sklearn.svm.SVC(C=10 ** logC, gamma=10 ** logGamma,kernel='rbf').fit(x_train, y_train)
+    decision_values = model.decision_function(x_test)
+    return optunity.metrics.roc_auc(y_test, decision_values)
+
+# perform tuning
+hps, _, _ = optunity.maximize(svm_auc, num_evals=100, logC=[-100, 100], logGamma=[-10, 10])
+
+# train model on the full training set with tuned hyperparameters
+optimal_model = sklearn.svm.SVC(C=10 ** hps['logC'], gamma=10 ** hps['logGamma']).fit(X_matrix, y_binary)
+
+for j in range(65):
+		
+			test = optimal_model.predict(X_matrix[j,:])
+			print(test)
+
+'''
 for current_C in Cs:
 	if current_C != 0:
 		clf = svm.SVC(C=current_C, gamma='auto')
@@ -142,10 +165,10 @@ for current_C in Cs:
 		
 print(min, minC)
 
-	
+'''	
     
 #(J_history,current_theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
-	
+
 
 
 '''final_difference = np.matmul(X_matrix,average_thetas)
