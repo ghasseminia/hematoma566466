@@ -102,18 +102,46 @@ y_binary = computeBinary(y_zero,initial_volumes)
 print(y_binary)
 # print(matrix.shape)
 
-alpha=0.0000001
-num_iters=10000
+'''alpha=0.0000001
+num_iters=10000'''
 ones = np.full((65,1),1)
 X_matrix = np.hstack((ones,X_matrix))
 theta = np.full((25,1),1)
-clf = svm.SVC(C=1, gamma='auto')
-clf.fit(X_matrix[range(50),:], y_binary)
-sumation = 0
-for i in (51,65):
-	#print(X_matrix[i,:])
-	test = clf.predict(X_matrix[i,:])
-	print(test)
+Cs = np.arange(100000.0)
+Cs = Cs/100
+min = 100
+minC = 0
+
+
+for current_C in Cs:
+	if current_C != 0:
+		clf = svm.SVC(C=current_C, gamma='auto')
+		Idx = range(50)
+		TrainX = []
+		TrainY = []
+		
+		for i in Idx:
+			Patient =  np.matrix(X_matrix[i,:]).tolist()#[X_matrix[i] for i in Idx]
+			Outcome = y_binary[i]
+			TrainX.append(Patient[0])
+			TrainY.append(Outcome)
+		
+		clf.fit(TrainX, TrainY)
+		error = 0
+	
+		for j in range(50,65):
+		
+			test = clf.predict(X_matrix[j,:])
+		
+			if y_binary[j] - test != 0:
+				error += 1
+		
+		if error < min:
+			min = error
+			minC = current_C
+		
+print(min, minC)
+
 	
     
 #(J_history,current_theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
