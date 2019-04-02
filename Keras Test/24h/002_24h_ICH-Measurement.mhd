@@ -1,0 +1,13 @@
+ObjectType = Image
+NDims = 3
+BinaryData = True
+BinaryDataByteOrderMSB = False
+CompressedData = False
+TransformMatrix = 1 0 0 0 0.956305 -0.292372 0 0.292372 0.956305
+Offset = -110.783 -274.271 -135.75
+CenterOfRotation = 0 0 0
+AnatomicalOrientation = RAI
+ElementSpacing = 0.433594 0.433594 5
+DimSize = 512 512 29
+ElementType = MET_UCHAR
+ElementDataFile = 002_24h_ICH-Measurement.raw
