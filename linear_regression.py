@@ -48,10 +48,11 @@ def gradient_descent(X,y,theta,alpha,num_iters):
     
     if i!=0 and i!=1:
         if J_history[i][0]-J_history[i-1][0]< alpha: 
-            print("convergence criterion is satisfied")
+            #print("convergence criterion is satisfied")
+            pass
     return(J_history,theta)
 ###################################################### 
-splits = 5      
+splits = 5   
 kfold = KFold(splits, True, 1)  
        
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
@@ -138,22 +139,23 @@ for train, test in split_data:
 	original_binary = computeBinary(y_zero[test,:],initial_volumes[test,:])	# classification using given data
 	learned_binary = computeBinary(test_difference,initial_volumes[test,:])
 	percent = accuracy(original_binary-learned_binary)
-	message = "%.2f%% accuracy on the training data" % percent	# accuracy for each iteration
-	print(iter, "iteration")
+	message = "%d iteration: %.2f%% accuracy on the test data" % (iter,percent)	# accuracy for each iteration
+	#print("%d iteration: "  message % iter)
 	print(message)
-	
+
+#print(all_thetas)
 #print("Y dimension:",y_zero.shape)
 average_thetas = np.zeros((len(all_thetas[0]),1))
 for i in range(splits):
 	for j in range(len(all_thetas[0])):
 		average_thetas[j] = average_thetas[j]+ all_thetas[i][j,0]
 average_thetas /= splits		# cross validates among 5 splits
+#print(average_thetas)
 
 final_difference = np.matmul(X_matrix,average_thetas)
 final_original_binary = computeBinary(y_zero,initial_volumes)	# classification using given data
 final_learned_binary = computeBinary(final_difference,initial_volumes)
 percent = accuracy(final_original_binary-final_learned_binary)
-message = "%.2f%% accuracy on the all data" % percent	# accuracy for each iteration
-print("\nfinal iteration")
+message = "\nAveraged thetas: %.2f%% accuracy on the all data" % percent	# accuracy for each iteration
 print(message)
 
