@@ -20,10 +20,11 @@ def computeBinary(difference,initial):
 	return binary		
 		
 def accuracy(binary):
+	samples = float(len(binary))
 	binary = np.absolute(binary)
 	incorrect = np.sum(binary)
-	correct = len(binary) - incorrect
-	accuracy = correct/len(binary)
+	correct = len(binary) - incorrect	
+	accuracy = correct/samples
 	return accuracy
 		
 def computeCost (X,y,theta):
@@ -118,22 +119,34 @@ minC = 0
 
 
 # score function: twice iterated 10-fold cross-validated accuracy
-@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=2, num_iter=2)
+@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=4, num_iter=2)
 def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
     model = sklearn.svm.SVC(C=10 ** logC, gamma=10 ** logGamma,kernel='rbf').fit(x_train, y_train)
     decision_values = model.decision_function(x_test)
     return optunity.metrics.roc_auc(y_test, decision_values)
 
 # perform tuning
-hps, _, _ = optunity.maximize(svm_auc, num_evals=100, logC=[-100, 100], logGamma=[-10, 10])
+hps, _, _ = optunity.maximize(svm_auc, num_evals=200, logC=[-5, 10], logGamma=[-100, 100])
+
 
 # train model on the full training set with tuned hyperparameters
 optimal_model = sklearn.svm.SVC(C=10 ** hps['logC'], gamma=10 ** hps['logGamma']).fit(X_matrix, y_binary)
 
+output = []
+ourguess = []
 for j in range(65):
 		
 			test = optimal_model.predict(X_matrix[j,:])
-			print(test)
+			ourguess.append(test[0])
+			
+ourguess = np.array(ourguess)
+binary = []
+for i in range(len(ourguess)):
+	binary.append(ourguess[i]-y_binary[i])
+print(binary)
+percent = accuracy(binary)
+print(percent)
+
 
 '''
 for current_C in Cs:
