@@ -249,7 +249,7 @@ if __name__ == '__main__':
 			for y in range(0, img_slices[index][0][1]):
 				for z in range(temp_slice, img_slices[index][0][2]):
 					if predictions[z,x,y,0] == True:
-						img_pred_arr[x, y, z] = 1
+						img_pred_arr[x, y, z - temp_slice] = 1
 		
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[index][2], img_slices[index][1])
 		
