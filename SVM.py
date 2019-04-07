@@ -7,7 +7,44 @@ import optunity
 import optunity.metrics
 import sklearn.svm
  
-#import matplotlib as plt
+ 
+def SimilarityMatrix(prediction,truth):
+	matrix = [[0, 0],[0, 0]]
+	for i in range(prediction.size):
+		# true negative (predicted negative correctly)
+		if prediction[i] == 0 and truth[i] == 0:
+			matrix[1][1] += 1
+		# false positive (predicted positive but is negative)
+		elif prediction[i] == 1 and truth[i] == 0:
+			matrix[0][1] += 1
+		# true positive (predicted positive correctly)
+		elif prediction[i] == 1 and truth[i] == 1:
+			matrix[0][0] += 1
+		# false negative (predicted negative but is positive)
+		elif prediction[i] == 0 and truth[i] == 1:
+			matrix[1][0] += 1
+	print("true negatives: ", matrix[1][1])
+	print("false negatives: ", matrix[1][0])
+	print("true positive: ", matrix[0][0])
+	print("false positives: ", matrix[0][1])
+	return matrix
+	
+	
+	
+def jaccardCoefficient(matrix):
+	print("jaccard coefficient: " + str(float(matrix[0][0])/(matrix[0][1]+matrix[1][0]+matrix[0][0])))
+	
+def dice_coefficient(matrix):
+	print("dice: " + str(2.0*matrix[1][1]/((2*matrix[1][1])+(matrix[0][1])+(matrix[1][0]))))
+    #dice coefficient 2nt/(na + nb)
+    #a_bigrams = set(a)
+    #b_bigrams = set(b)
+    #overlap = len(a_bigrams & b_bigrams)
+    
+    #print("dice: " +  str(overlap * 2.0/(len(a_bigrams) + len(b_bigrams))))"""
+			
+ 
+ 
 def computeBinary(difference,initial):	 
 	m = len(difference)
 	binary = []
@@ -118,8 +155,8 @@ minC = 0
 
 
 
-# score function: twice iterated 10-fold cross-validated accuracy
-@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=4, num_iter=2)
+# score function: twice iterated 5-fold cross-validated accuracy
+@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=5, num_iter=2)
 def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
     model = sklearn.svm.SVC(C=10 ** logC, gamma=10 ** logGamma,kernel='rbf').fit(x_train, y_train)
     decision_values = model.decision_function(x_test)
@@ -141,53 +178,18 @@ for j in range(65):
 			
 ourguess = np.array(ourguess)
 binary = []
+
+
 for i in range(len(ourguess)):
 	binary.append(ourguess[i]-y_binary[i])
-print(binary)
 percent = accuracy(binary)
-print(percent)
 
-
-'''
-for current_C in Cs:
-	if current_C != 0:
-		clf = svm.SVC(C=current_C, gamma='auto')
-		Idx = range(50)
-		TrainX = []
-		TrainY = []
-		
-		for i in Idx:
-			Patient =  np.matrix(X_matrix[i,:]).tolist()#[X_matrix[i] for i in Idx]
-			Outcome = y_binary[i]
-			TrainX.append(Patient[0])
-			TrainY.append(Outcome)
-		
-		clf.fit(TrainX, TrainY)
-		error = 0
-	
-		for j in range(50,65):
-		
-			test = clf.predict(X_matrix[j,:])
-		
-			if y_binary[j] - test != 0:
-				error += 1
-		
-		if error < min:
-			min = error
-			minC = current_C
-		
-print(min, minC)
-
-'''	
-    
-#(J_history,current_theta)= gradient_descent(X_matrix,y_zero,theta,alpha,num_iters)
+simMatrix = SimilarityMatrix(ourguess,y_binary)
+print("percent: " + str(percent))
+dice_coefficient(simMatrix)
+jaccardCoefficient(simMatrix)
+jaccardIndex(ourguess,y_binary)
 
 
 
-'''final_difference = np.matmul(X_matrix,average_thetas)
-final_original_binary = computeBinary(y_zero,initial_volumes)	# classification using given data
-final_learned_binary = computeBinary(final_difference,initial_volumes)
-percent = accuracy(final_original_binary-final_learned_binary)
-message = "\nAveraged thetas: %.2f%% accuracy on the all data" % percent	# accuracy for each iteration
-print(message)'''
 
