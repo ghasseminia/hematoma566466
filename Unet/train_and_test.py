@@ -208,17 +208,21 @@ if __name__ == '__main__':
 	X_test = []
 
 	# pre_process of the test data
-	for index in range(1,2):
+
+	imgrange_start = 1
+	imgrange_end = 3
+	img_slices = []
+	for index in range(imgrange_start,imgrange_end):
 		
 		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
 		img0 = nib.load(scan_at_t0)
 		img0_data = img0.get_data()
 		img0_data_arr = np.asarray(img0_data)
-		img0_header = img0.header
-		img0_affine = img0.affine
 
 		print(img0_data_arr.shape)
 		tmpX = np.zeros((512,512), dtype=np.int16)
+
+		img_slices.append([img0.shape, img0.header, img0.affine])
 
 		for i in range(img0.shape[2]):
 			tmpX[:,:]=img0_data_arr[:,:,i]
@@ -231,23 +235,26 @@ if __name__ == '__main__':
 
 	predictions = predict(X_test, weights_filename, architecture_filename)
 
-	#img0_pred_dim1 = np.array(predictions[0,:,0,0], np.int16)
-	#img0_pred_dim2 = np.array(predictions[0,0,:,0], np.int16)
-	#img0_pred_dim3 = np.array(predictions[:,0,0,0], np.int16)
-	#img0_pred_arr = np.array([img0_pred_dim1, img0_pred_dim2, img0_pred_dim3], dtype=object)
+	#img_pred_dim1 = np.array(predictions[0,:,0,0], np.int16)
+	#img_pred_dim2 = np.array(predictions[0,0,:,0], np.int16)
+	#img_pred_dim3 = np.array(predictions[:,0,0,0], np.int16)
+	#img_pred_arr = np.array([img_pred_dim1, img_pred_dim2, img_pred_dim3], dtype=object)
 	
-	img0_pred_arr = np.zeros(img0.shape)
+	temp_slice = 0
+	for index in range(imgrange_start-1,imgrange_end-1):
+		img_pred_arr = np.zeros(img_slices[index][0])
 
-	for x in range(0, predictions.shape[1]):
-		for y in range(0, predictions.shape[2]):
-			for z in range(0, predictions.shape[0]):
-				if predictions[z,x,y,0] == True:
-					img0_pred_arr[x, y, z] = 1
-	
-	img0_pred = nib.Nifti1Image(img0_pred_arr, img0_affine, img0_header)
-	
-	nib.save(img0_pred, os.path.join('.\\','pred_image.nii'))
-
+		for x in range(0, img_slices[index][0][0]):
+			for y in range(0, img_slices[index][0][1]):
+				for z in range(temp_slice, img_slices[index][0][2]):
+					if predictions[z,x,y,0] == True:
+						img_pred_arr[x, y, z] = 1
+		
+		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[index][2], img_slices[index][1])
+		
+		nib.save(img_pred, os.path.join('.\\',str(index) + '_pred_image.nii'))
+		
+		temp_slice = img_slices[index][0][2]
 
 
 	# We need to read back the values and reconstruct the images.
