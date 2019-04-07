@@ -17,7 +17,7 @@ lbl = np.rot90(lbl, 3,(0,1))
 
 #print(lbl)
 
-nib.save(lbl, os.path.join('.\\','test4d.nii.gz'))
+nib.save(img, os.path.join('.\\','niftitest.nii.gz'))
 
 '''
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
