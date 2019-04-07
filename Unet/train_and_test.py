@@ -212,9 +212,9 @@ if __name__ == '__main__':
 	imgrange_start = 1
 	imgrange_end = 3
 	img_slices = []
-	for index in range(imgrange_start,imgrange_end):
+	for index in range(0,imgrange_end - imgrange_start):
 		
-		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
+		scan_at_t0 = os.path.join(str(index + imgrange_start) + '_2h_ICH-Measurement' + '.nii')
 		img0 = nib.load(scan_at_t0)
 		img0_data = img0.get_data()
 		img0_data_arr = np.asarray(img0_data)
@@ -241,7 +241,7 @@ if __name__ == '__main__':
 	#img_pred_arr = np.array([img_pred_dim1, img_pred_dim2, img_pred_dim3], dtype=object)
 	
 	temp_slice = 0
-	for index in range(imgrange_start-1,imgrange_end-1):
+	for index in range(0,imgrange_end - imgrange_start):
 		img_pred_arr = np.zeros(img_slices[index][0])
 
 		for x in range(0, img_slices[index][0][0]):
@@ -252,7 +252,7 @@ if __name__ == '__main__':
 		
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[index][2], img_slices[index][1])
 		
-		nib.save(img_pred, os.path.join('.\\',str(index) + '_pred_image.nii'))
+		nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
 		
 		temp_slice = img_slices[index][0][2]
 
