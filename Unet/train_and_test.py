@@ -1,5 +1,6 @@
 # Default to be a python3 script
 import os
+import platform
 import pydicom
 from skimage.transform import resize
 from skimage.io import imsave
@@ -252,8 +253,10 @@ if __name__ == '__main__':
 		
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[index][2], img_slices[index][1])
 		
-		nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
-		
+		if (platform.system() == 'Windows'):
+			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
+		else:
+			nib.save(img_pred, os.path.join('./',str(index + imgrange_start) + '_pred_image.nii'))
 		temp_slice = img_slices[index][0][2]
 
 
