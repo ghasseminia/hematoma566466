@@ -21,7 +21,7 @@ from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras.utils import multi_gpu_model
 from tensorflow.keras.models import model_from_json
 # custom packages
-from medo_api.core.losses import dice_coef_loss, dice_coef
+#from medo_api.core.losses import dice_coef_loss, dice_coef
 
 import tensorflow as tf
 #from keras.backend.tensorflow_backend import set_session
@@ -189,35 +189,35 @@ def predict(X, weights_filename, architecture_filename):
 if __name__ == '__main__':
 	
 	# Uncomment this line to train the network again
-	#train_model()
+	train_model()
 
 	weights_filename = './weights.h5'
 	architecture_filename = './model.json'
 
 
-	X_test = []
-
-	# pre_process of the test data
-	for index in range(21,27):
-		
-		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
-		img0 = nib.load(scan_at_t0)
-		img0_data = img0.get_data()
-		img0_data_arr = np.asarray(img0_data)
-
-		print(img0_data_arr.shape)
-		tmpX = np.zeros((512,512))
-
-		for i in range(img0.shape[2]):
-			tmpX[:,:]=img0_data_arr[:,:,i]
-			
-			X_test.append(tmpX[:,:])
-			
-    
-	X_test = np.array(X_test)
-	X_test = np.expand_dims(X_test, axis=3)
-
-	predictions = predict(X_test, weights_filename, architecture_filename)
+#	X_test = []
+#
+#	# pre_process of the test data
+#	for index in range(21,27):
+#		
+#		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
+#		img0 = nib.load(scan_at_t0)
+#		img0_data = img0.get_data()
+#		img0_data_arr = np.asarray(img0_data)
+#
+#		print(img0_data_arr.shape)
+#		tmpX = np.zeros((512,512))
+#
+#		for i in range(img0.shape[2]):
+#			tmpX[:,:]=img0_data_arr[:,:,i]
+#			
+#			X_test.append(tmpX[:,:])
+#			
+#    
+#	X_test = np.array(X_test)
+#	X_test = np.expand_dims(X_test, axis=3)
+#
+#	predictions = predict(X_test, weights_filename, architecture_filename)
 
 	# We need to read back the values and reconstruct the images.
 	# We also need to measure the performance
