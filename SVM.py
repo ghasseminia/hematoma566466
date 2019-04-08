@@ -35,7 +35,7 @@ def jaccardCoefficient(matrix):
 	print("jaccard coefficient: " + str(float(matrix[0][0])/(matrix[0][1]+matrix[1][0]+matrix[0][0])))
 	
 def dice_coefficient(matrix):
-	print("dice: " + str(2.0*matrix[1][1]/((2*matrix[1][1])+(matrix[0][1])+(matrix[1][0]))))
+	return 2.0*matrix[1][1]/((2*matrix[1][1])+(matrix[0][1])+(matrix[1][0]))
     #dice coefficient 2nt/(na + nb)
     #a_bigrams = set(a)
     #b_bigrams = set(b)
@@ -97,7 +97,7 @@ def gradient_descent(X,y,theta,alpha,num_iters):
        
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
 MAXROW = 76
-SELECTED = ['E','D','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AZ']
+SELECTED = ['E','D','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z', 'AA','AB','AC','AD','AE']
 std_col = ['G','J','M','AI','AL','AO']
 wb = opxl.load_workbook("linear_table_edited.xlsx")
 data_set = wb['Sheet3']
@@ -110,6 +110,7 @@ for y in range(2,MAXROW+1):
             #print(x+str(y))
             cell_idx = x+str(y)
             # print(cell_idx)
+            print(data_set[cell_idx].value)
             row.append(float(data_set[cell_idx].value))
         # print(row)
         X_matrix.append(row)
@@ -131,7 +132,7 @@ for y in range(2,MAXROW+1):
         y_zero.append(diff)
     
     
-#print(matrix)
+print(X_matrix)
 initial_volumes = np.matrix(initial_volumes)
 initial_volumes = np.transpose(initial_volumes)
 end_volumes = np.matrix(end_volumes)
@@ -146,50 +147,51 @@ y_binary = computeBinary(y_zero,initial_volumes)
 num_iters=10000'''
 ones = np.full((65,1),1)
 X_matrix = np.hstack((ones,X_matrix))
-theta = np.full((25,1),1)
+theta = np.full((23,1),1)
 Cs = np.arange(100000.0)
 Cs = Cs/100
 min = 100
 minC = 0
+dice = 0
+percent = 0
 
 
+for i in range(15):
+	# score function: twice iterated 5-fold cross-validated accuracy
+	@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=5, num_iter=2)
+	def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
+		model = sklearn.svm.SVC(C=10 ** logC, gamma=10 ** logGamma,kernel='rbf').fit(x_train, y_train)
+		decision_values = model.decision_function(x_test)
+		return optunity.metrics.roc_auc(y_test, decision_values)
+
+	# perform tuning
+	hps, _, _ = optunity.maximize(svm_auc, num_evals=200, logC=[-4, 10], logGamma=[-100, 100])
 
 
-# score function: twice iterated 5-fold cross-validated accuracy
-@optunity.cross_validated(x=X_matrix, y=y_binary, num_folds=5, num_iter=2)
-def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
-    model = sklearn.svm.SVC(C=10 ** logC, gamma=10 ** logGamma,kernel='rbf').fit(x_train, y_train)
-    decision_values = model.decision_function(x_test)
-    return optunity.metrics.roc_auc(y_test, decision_values)
+	# train model on the full training set with tuned hyperparameters
+	optimal_model = sklearn.svm.SVC(C=10 ** hps['logC'], gamma=10 ** hps['logGamma']).fit(X_matrix, y_binary)
 
-# perform tuning
-hps, _, _ = optunity.maximize(svm_auc, num_evals=200, logC=[-5, 10], logGamma=[-100, 100])
-
-
-# train model on the full training set with tuned hyperparameters
-optimal_model = sklearn.svm.SVC(C=10 ** hps['logC'], gamma=10 ** hps['logGamma']).fit(X_matrix, y_binary)
-
-output = []
-ourguess = []
-for j in range(65):
-		
-			test = optimal_model.predict(X_matrix[j,:])
-			ourguess.append(test[0])
+	output = []
+	ourguess = []
+	for j in range(65):
+		test = optimal_model.predict(X_matrix[j,:])
+		ourguess.append(test[0])
 			
-ourguess = np.array(ourguess)
-binary = []
+	ourguess = np.array(ourguess)
+	binary = []
 
 
-for i in range(len(ourguess)):
-	binary.append(ourguess[i]-y_binary[i])
-percent = accuracy(binary)
+	for i in range(len(ourguess)):
+		binary.append(ourguess[i]-y_binary[i])
+	percent += accuracy(binary)
 
-simMatrix = SimilarityMatrix(ourguess,y_binary)
-print("percent: " + str(percent))
-dice_coefficient(simMatrix)
-jaccardCoefficient(simMatrix)
-jaccardIndex(ourguess,y_binary)
+	simMatrix = SimilarityMatrix(ourguess,y_binary)
+	#print("percent: " + str(percent))
+	dice += dice_coefficient(simMatrix)
+	#jaccardCoefficient(simMatrix)
 
 
+print("percent: " + str(percent/15))
+print("Dice: " + str(dice/15))
 
 
