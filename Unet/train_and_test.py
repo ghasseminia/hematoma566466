@@ -41,7 +41,7 @@ def dice_coef(y_true, y_pred, smooth=1.):
 
 
 def dice_coef_loss(y_true, y_pred):
-	return -dice_coefficient(y_true, y_pred)
+	return -dice_coef(y_true, y_pred)
 
 def get_unet0(lr=5e-5, img_row=512, img_cols=512, multigpu=1):
 	''' Create the network model
@@ -123,7 +123,7 @@ def train_model():
 	y = []
 
 	# pre_process
-	for index in range(1,12):
+	for index in range(1,11):
 		
 		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
 		scan_at_t1 = os.path.join(str(index) + '_24h_ICH-Measurement' + '.nii')
@@ -148,11 +148,12 @@ def train_model():
 			tmpy[:,:]=img1_data_arr[:,:,i]
 			
 			print(tmpX.shape,tmpy.shape)
-			X.append(tmpX[:,:])
-			y.append(tmpy[:,:])
+			if np.any(tmpX[:,:] == 1):
+				X.append(tmpX[:,:])
+				y.append(tmpy[:,:])
     
-	X = np.array(X)
-	y = np.array(y)
+	X = np.array(X, dtype=np.int16)
+	y = np.array(y, dtype=np.int16)
 	X = np.expand_dims(X, axis=3)
 	y = np.expand_dims(y, axis=3)
 
@@ -171,7 +172,7 @@ def train_model():
 	print('-'*30)
 	print('Fitting model...')
 	print('-'*30)
-	model.fit(X, y, batch_size=1, epochs=200, verbose=1, shuffle=True,
+	model.fit(X, y, batch_size=1, epochs=50, verbose=1, shuffle=True,
 			  validation_split=0.2,
 			  callbacks=[model_checkpoint, early_stopping])
 
@@ -186,7 +187,7 @@ def predict(X, weights_filename, architecture_filename):
 		loaded_model_json_ac = json_file.read()
 	model = model_from_json(loaded_model_json_ac)
 	model.load_weights(weights_filename)
-
+	
 	# Threshold to use to convert the probability map to a binary mask.
 	thresh = 0.5
 	# This is the output of the sigmoid
@@ -200,21 +201,19 @@ def predict(X, weights_filename, architecture_filename):
 if __name__ == '__main__':
 	
 	# Uncomment this line to train the network again
-	#train_model()
+	train_model()
 
 	weights_filename = './weights.h5'
 	architecture_filename = './model.json'
 
-
-	X_test = []
-
 	# pre_process of the test data
 
-	imgrange_start = 1
-	imgrange_end = 3
-	img_slices = []
+	imgrange_start = 21
+	imgrange_end = 27
+	
 	for index in range(0,imgrange_end - imgrange_start):
-		
+		img_slices = []
+		X_test = []
 		scan_at_t0 = os.path.join(str(index + imgrange_start) + '_2h_ICH-Measurement' + '.nii')
 		img0 = nib.load(scan_at_t0)
 		img0_data = img0.get_data()
@@ -223,41 +222,42 @@ if __name__ == '__main__':
 		print(img0_data_arr.shape)
 		tmpX = np.zeros((512,512), dtype=np.int16)
 
-		img_slices.append([img0.shape, img0.header, img0.affine])
+		img_slices = [img0.shape, img0.header, img0.affine]
 
+		num_slices = 0
+		slice_indices = [-1, -1]	# [min, max]
 		for i in range(img0.shape[2]):
+			tmpX = np.zeros((512,512), dtype=np.int16)
 			tmpX[:,:]=img0_data_arr[:,:,i]
 			
-			X_test.append(tmpX[:,:])
+			if np.any(tmpX[:,:] == 1):
+				X_test.append(tmpX[:,:])
+				if slice_indices[0] == -1:
+					slice_indices[0] = i
+					slice_indices[1] = i
+				else:
+					slice_indices[1] = i
+				num_slices += 1
 			
-    
-	X_test = np.array(X_test)
-	X_test = np.expand_dims(X_test, axis=3)
+		X_test = np.array(X_test, dtype=np.int16)
+		X_test = np.expand_dims(X_test, axis=3)
 
-	predictions = predict(X_test, weights_filename, architecture_filename)
-
-	#img_pred_dim1 = np.array(predictions[0,:,0,0], np.int16)
-	#img_pred_dim2 = np.array(predictions[0,0,:,0], np.int16)
-	#img_pred_dim3 = np.array(predictions[:,0,0,0], np.int16)
-	#img_pred_arr = np.array([img_pred_dim1, img_pred_dim2, img_pred_dim3], dtype=object)
+		predictions = predict(X_test, weights_filename, architecture_filename)
 	
-	temp_slice = 0
-	for index in range(0,imgrange_end - imgrange_start):
-		img_pred_arr = np.zeros(img_slices[index][0])
+		img_pred_arr = np.zeros(img_slices[0])
 
-		for x in range(0, img_slices[index][0][0]):
-			for y in range(0, img_slices[index][0][1]):
-				for z in range(temp_slice, img_slices[index][0][2]):
-					if predictions[z,x,y,0] == True:
-						img_pred_arr[x, y, z - temp_slice] = 1
+		for x in range(0, img_slices[0][0]):
+			for y in range(0, img_slices[0][1]):
+				for z in range(slice_indices[0], slice_indices[1] + 1):
+					if predictions[(z - slice_indices[0]),x,y,0] == True:
+						img_pred_arr[x, y, z] = 1
 		
-		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[index][2], img_slices[index][1])
+		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[2], img_slices[1])
 		
 		if (platform.system() == 'Windows'):
 			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
 		else:
 			nib.save(img_pred, os.path.join('./',str(index + imgrange_start) + '_pred_image.nii'))
-		temp_slice = img_slices[index][0][2]
 
 
 	# We need to read back the values and reconstruct the images.
