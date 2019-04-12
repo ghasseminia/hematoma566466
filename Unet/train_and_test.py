@@ -248,7 +248,7 @@ if __name__ == '__main__':
 
 		for x in range(0, img_slices[0][0]):
 			for y in range(0, img_slices[0][1]):
-				for z in range(slice_indices[0], slice_indices[1] + 1):
+				for z in range(slice_indices[0], slice_indices[0] + num_slices):
 					if predictions[(z - slice_indices[0]),x,y,0] == True:
 						img_pred_arr[x, y, z] = 1
 		
