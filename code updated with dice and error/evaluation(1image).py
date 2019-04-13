@@ -7,7 +7,7 @@ from skimage.io import imsave
 import numpy as np
 import sys
 import nibabel as nib
-
+import math
 
 np.random.seed(197853) # for reproducibility
 # import Keras
@@ -34,11 +34,11 @@ K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 
 ##############################equalizing number of slices to and save them to easily open them in 1 ITKsnap
-lbl_file = "./21_24h_ICH-Measurement.nii"
+lbl_file = "./22_24h_ICH-Measurement.nii"
 img= nib.load(lbl_file)
 lbl = img.get_fdata()
 
-salam = "./21_pred_image.nii"
+salam = "./22_pred_image.nii"
 img= nib.load(salam)
 salam = img.get_fdata()
 TP2=0
@@ -55,6 +55,8 @@ if (platform.system() == 'Windows'):
         
 prediction=salam
 target=lbl
+print( sum(sum(sum(prediction))) )
+print( sum(sum(sum(lbl))) )
 ############################
 
 def dice_score(prediction, target):
@@ -65,15 +67,15 @@ def dice_score(prediction, target):
     TP1=0
     TP2=0
     minimum = min(target.shape[2],prediction.shape[2])
-    Z1=np.zeros((20,1))
-    Z2=np.zeros((20,1))
+    Z1=np.zeros((100,1))
+    Z2=np.zeros((100,1))
 ######
     J=0
     for z in range(0,target.shape[2]):
         k=1
         for y in range(0, target.shape[1]):
             for x in range(0, target.shape[0]):
-                if (target[x][y][z]==1 and k==1): 
+                if (round(target[x][y][z])==1 and k==1): 
                     Z1[J][0]=z
                     J=J+1
                     k=k+1
@@ -84,7 +86,7 @@ def dice_score(prediction, target):
         k=1
         for y in range(0, prediction.shape[1]):
             for x in range(0, prediction.shape[0]):
-                if (prediction[x][y][z]==1 and k==1): 
+                if (round(prediction[x][y][z])==1 and k==1): 
                     Z2[J][0]=z
                     J=J+1
                     k=k+1
@@ -93,17 +95,18 @@ def dice_score(prediction, target):
     for x in range(0, target.shape[0]):
         for y in range(0, target.shape[1]):
             for z in range(0,minimum):
-                if (prediction[x][y][z]==target[x][y][z] and target[x][y][z]==1  ):  
+                if (round(prediction[x][y][z])==round(target[x][y][z]) and round(prediction[x][y][z])==1  ):  
                     TP=TP+1
-                elif(prediction[x][y][z]!=target[x][y][z] and prediction[x][y][z]==1  ):
+                elif(round(prediction[x][y][z])!=round(target[x][y][z]) and round(prediction[x][y][z])==1  ):
                     FP=FP+1
-                elif(prediction[x][y][z]!=target[x][y][z] and prediction[x][y][z]==0  ):
+                elif(round(prediction[x][y][z])!=round(target[x][y][z])and round(prediction[x][y][z])==0  ):
                     FN=FN+1
     print(TP)
     dice = (2*TP)/(2*TP+FN+FP)
     return dice
 print( 'dice score is')
 print( dice_score(prediction, target) )
+
 def binary_error(prediction, target):
     TP1=0
     TP2=0
@@ -112,16 +115,16 @@ def binary_error(prediction, target):
     for x in range(0, target.shape[0]):
         for y in range(0, target.shape[1]):
             for z in range(0, target.shape[2]):
-                if (target[x][y][z]==1):
+                if (round(target[x][y][z])==1):
                     TP2=TP2+1
     for x in range(0, prediction.shape[0]):
         for y in range(0, prediction.shape[1]):
             for z in range(0, prediction.shape[2]):               
-                    if (prediction[x][y][z]==1):
+                    if (round( prediction[x][y][z])==1):
                         TP1=TP1+1              
     print(TP1)
     print(TP2)
-    ERROR=(TP2-TP1)/TP2   
+    ERROR=abs( (TP2-TP1) )/TP2   
     return ERROR
 print( 'accuracy is')
 print( 1-binary_error(prediction, target) )
