@@ -55,8 +55,6 @@ if (platform.system() == 'Windows'):
         
 prediction=salam
 target=lbl
-print( sum(sum(sum(prediction))) )
-print( sum(sum(sum(lbl))) )
 ############################
 
 def dice_score(prediction, target):
@@ -101,7 +99,6 @@ def dice_score(prediction, target):
                     FP=FP+1
                 elif(round(prediction[x][y][z])!=round(target[x][y][z])and round(prediction[x][y][z])==0  ):
                     FN=FN+1
-    print(TP)
     dice = (2*TP)/(2*TP+FN+FP)
     return dice
 print( 'dice score is')
@@ -122,8 +119,6 @@ def binary_error(prediction, target):
             for z in range(0, prediction.shape[2]):               
                     if (round( prediction[x][y][z])==1):
                         TP1=TP1+1              
-    print(TP1)
-    print(TP2)
     ERROR=abs( (TP2-TP1) )/TP2   
     return ERROR
 print( 'accuracy is')
