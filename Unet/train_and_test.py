@@ -4,6 +4,7 @@ import platform
 import pydicom
 from skimage.transform import resize
 from skimage.io import imsave
+from scipy import interpolate
 import numpy as np
 import sys
 import nibabel as nib
@@ -123,13 +124,15 @@ def train_model():
 	y = []
 
 	# pre_process
-	for index in range(1,11):
-		
+	for index in range(2,3):
 		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
 		scan_at_t1 = os.path.join(str(index) + '_24h_ICH-Measurement' + '.nii')
-
-		img0 = nib.load(scan_at_t0)
-		img1 = nib.load(scan_at_t1)
+		
+		try:
+			img0 = nib.load(scan_at_t0)
+			img1 = nib.load(scan_at_t1)
+		except OSError:
+			continue
 
 		img0_data = img0.get_data()
 		img1_data = img1.get_data()
@@ -143,14 +146,30 @@ def train_model():
 		tmpX = np.zeros((512,512))
 		tmpy = np.zeros((512,512))
 
+		# Store info about slices with hematoma labels to help with matching
+		# [index in img, number of voxels == 1]
+		X_hematoma_slices = []
+		y_hematoma_slices = []
+
 		for i in range(min(img0.shape[2] , img1.shape[2])):
 			tmpX[:,:]=img0_data_arr[:,:,i]
 			tmpy[:,:]=img1_data_arr[:,:,i]
 			
 			print(tmpX.shape,tmpy.shape)
 			if np.any(tmpX[:,:] == 1):
-				X.append(tmpX[:,:])
-				y.append(tmpy[:,:])
+				X_hematoma_slices.append([i, np.count_nonzero(tmpX[:,:])])
+			if np.any(tmpy[:,:] == 1):
+				y_hematoma_slices.append([i, np.count_nonzero(tmpX[:,:])])
+
+		# Need to match X and y slices as much as possible (assume slices with largest area in X and y correspond to each other)
+		X_max_slice = max(enumerate(X_hematoma_slices), key=lambda x: x[1])
+		y_max_slice = max(enumerate(y_hematoma_slices), key=lambda x: x[1])
+
+		index_offset = y_max_slice[0] - X_max_slice[0]
+
+		for i in range(len(X_hematoma_slices)):
+			X.append(img0_data_arr[:,:,X_hematoma_slices[i][0]])
+			y.append(img1_data_arr[:,:,X_hematoma_slices[i][0]] + index_offset)
     
 	X = np.array(X, dtype=np.int16)
 	y = np.array(y, dtype=np.int16)
@@ -172,7 +191,7 @@ def train_model():
 	print('-'*30)
 	print('Fitting model...')
 	print('-'*30)
-	model.fit(X, y, batch_size=1, epochs=50, verbose=1, shuffle=True,
+	model.fit(X, y, batch_size=1, epochs=10, verbose=1, shuffle=True,
 			  validation_split=0.2,
 			  callbacks=[model_checkpoint, early_stopping])
 
@@ -208,14 +227,17 @@ if __name__ == '__main__':
 
 	# pre_process of the test data
 
-	imgrange_start = 21
-	imgrange_end = 27
+	imgrange_start = 1
+	imgrange_end = 28
 	
 	for index in range(0,imgrange_end - imgrange_start):
 		img_slices = []
 		X_test = []
 		scan_at_t0 = os.path.join(str(index + imgrange_start) + '_2h_ICH-Measurement' + '.nii')
-		img0 = nib.load(scan_at_t0)
+		try:
+			img0 = nib.load(scan_at_t0)
+		except OSError:
+			continue
 		img0_data = img0.get_data()
 		img0_data_arr = np.asarray(img0_data)
 
@@ -242,14 +264,20 @@ if __name__ == '__main__':
 		X_test = np.array(X_test, dtype=np.int16)
 		X_test = np.expand_dims(X_test, axis=3)
 
+		#rot_X = np.rot90(X_test)
+		#print("---")
+		#print(X_test.shape)
+		#print(rot_X.shape)
+		#print("---")
+
 		predictions = predict(X_test, weights_filename, architecture_filename)
 	
 		img_pred_arr = np.zeros(img_slices[0])
 
 		for x in range(0, img_slices[0][0]):
 			for y in range(0, img_slices[0][1]):
-				for z in range(slice_indices[0], slice_indices[1] + 1):
-					if predictions[(z - slice_indices[0]),x,y,0] == True:
+				for z in range(slice_indices[0], slice_indices[0] + num_slices):
+					if predictions[z - slice_indices[0],x,y,0] == True:
 						img_pred_arr[x, y, z] = 1
 		
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[2], img_slices[1])

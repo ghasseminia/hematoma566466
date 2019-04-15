@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# weights and labels
+Unet/*.h5
+Unet/*.nii
