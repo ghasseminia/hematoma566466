@@ -182,7 +182,8 @@ testy = np.array(testy.tolist()[0])
 
 
 
-
+###################################################################
+################## Code from sklearn website#######################
 # score function: twice iterated 5-fold cross-validated accuracy
 @optunity.cross_validated(x=trainx, y=trainy, num_folds=4, num_iter=2)
 def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
@@ -192,12 +193,13 @@ def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
 
 # perform tuning
 hps, _, _ = optunity.maximize(svm_auc, num_evals=50, logC=[-15, 15], logGamma=[-100, 100])
-print(hps)
+#print(hps)
 
 # train model on the full training set with tuned hyperparameters
-optimal_model = sklearn.svm.SVC(C=3.1, gamma=0.00025,class_weight=cost_dict).fit(trainx, trainy)
-#C=10 ** hps['logC'], gamma=10 ** hps['logGamma']
-#C=3.1, gamma=0.00025
+optimal_model = sklearn.svm.SVC(C=3, gamma=0.00025,class_weight=cost_dict).fit(trainx, trainy)
+##################################################################
+
+
 output = []
 ourguess = []
 for j in range(15):
