@@ -54,7 +54,7 @@ def jaccardCoefficient(matrix):
 	print("jaccard coefficient: " + str(float(matrix[0][0])/(matrix[0][1]+matrix[1][0]+matrix[0][0])))
 	
 def dice_coefficient(matrix):
-	return 2.0*matrix[1][1]/((2*matrix[1][1])+(matrix[0][1])+(matrix[1][0]))
+	return 2.0*matrix[0][0]/((2*matrix[0][0])+(matrix[0][1])+(matrix[1][0]))
     #dice coefficient 2nt/(na + nb)
     #a_bigrams = set(a)
     #b_bigrams = set(b)
@@ -116,7 +116,7 @@ def gradient_descent(X,y,theta,alpha,num_iters):
        
 np.set_printoptions(threshold=sys.maxsize,precision = 2,linewidth=200)
 MAXROW = 76
-SELECTED = ['E','D','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z', 'AA','AB','AC','AD','AE']
+SELECTED = ['E','D','F','G','H','K','L','N','Q','R','S','T','U','V','W','X','Y','Z', 'AA','AB','AC','AD','AE','IF','IG']
 std_col = ['G','J','M','AI','AL','AO']
 wb = opxl.load_workbook("linear_table_edited.xlsx")
 data_set = wb['Sheet3']
@@ -150,7 +150,7 @@ for y in range(2,MAXROW+1):
         end_volumes.append(ICH_24hr)
         y_zero.append(diff)
     
-    
+
 #print(X_matrix)
 initial_volumes = np.matrix(initial_volumes)
 initial_volumes = np.transpose(initial_volumes)
@@ -159,11 +159,13 @@ end_volumes = np.transpose(end_volumes)
 y_zero = np.matrix(y_zero)
 y_zero = np.transpose(y_zero)
 y_binary = computeBinary(y_zero,initial_volumes)
+
+cost_dict = {}
+cost_dict[1] = 2.5		# the cost of predicting class 1 when it is not
+cost_dict[0] = 1		# the cost of predicting class 0 when it is not
 #print(y_binary)
 # print(matrix.shape)
 
-'''alpha=0.0000001
-num_iters=10000'''
 ones = np.full((65,1),1)
 X_matrix = np.hstack((ones,X_matrix))
 theta = np.full((23,1),1)
@@ -189,12 +191,13 @@ def svm_auc(x_train, y_train, x_test, y_test, logC, logGamma):
 	return optunity.metrics.roc_auc(y_test, decision_values)
 
 # perform tuning
-hps, _, _ = optunity.maximize(svm_auc, num_evals=50, logC=[-10, 10], logGamma=[-100, 100])
+hps, _, _ = optunity.maximize(svm_auc, num_evals=50, logC=[-15, 15], logGamma=[-100, 100])
 print(hps)
 
 # train model on the full training set with tuned hyperparameters
-optimal_model = sklearn.svm.SVC(C=3.1, gamma=0.00025).fit(X_matrix, y_binary)
-
+optimal_model = sklearn.svm.SVC(C=3.1, gamma=0.00025,class_weight=cost_dict).fit(trainx, trainy)
+#C=10 ** hps['logC'], gamma=10 ** hps['logGamma']
+#C=3.1, gamma=0.00025
 output = []
 ourguess = []
 for j in range(15):
