@@ -8,6 +8,7 @@ from sklearn.tree import export_graphviz
 from sklearn.metrics import accuracy_score 
 from sklearn.metrics import classification_report 
 from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
 np.set_printoptions(threshold=sys.maxsize)
 
 #--import the data--#########################
@@ -83,6 +84,15 @@ def train_entropy(X_train, y_train,md,msp,msl,mlf):
     clf_entropy.fit(X_train, y_train) 
     return clf_entropy 
 
+def train_random_tree(X_train,Y_train):
+    
+    #random forest 
+    clf_obj = RandomForestClassifier(n_estimators=30, max_depth = 2, min_samples_split = 2, min_samples_leaf = 2)
+    
+    #perform fitting
+    clf_obj.fit(X_train,Y_train)
+    return clf_obj
+
 #--function to produce all the outcome that i need==#####################
 def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
     
@@ -111,9 +121,17 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
         X_train, X_test, Y_train, Y_test = cross_validation_split(X,Y)
         
         if test_type == "gini":
-            clf_obj = train_gini(X_train,Y_train,md,msp,msl,mlf)
-        else:
-            clf_obj = train_entropy(X_train,Y_train,md,msp,msl,mlf)
+            if result_type == "mortality":
+                clf_obj = train_gini(X_train,Y_train,10,6,8,mlf)
+            elif result_type == "expansion":
+                clf_obj = train_gini(X_train,Y_train,3,8,8,mlf)
+        elif test_type == "entropy":
+            if result_type == "mortality":
+                clf_obj = train_entropy(X_train,Y_train,10,15,4,mlf)
+            elif result_type == "expansion":
+                clf_obj = train_entropy(X_train,Y_train,3,6,4,mlf)
+        elif test_type == "randomForest":
+            clf_obj = train_random_tree(X_train,Y_train) 
         # print(clf_obj.tree_)
         Y_pred = clf_obj.predict(X_test) 
         # print(Y_pred)
@@ -126,12 +144,8 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
         
 
         #default accuracy when guessing the most common
-        if result_type == "mortality":
-            default_acc = 100-np.sum(Y_test)/np.size(Y_test)*100
-            overall_default_acc+=default_acc
-        elif result_type == "expansion":
-            default_acc = 100-np.sum(Y_test)/np.size(Y_test)*100
-            overall_default_acc+=default_acc
+        default_acc = 100-np.sum(Y_test)/np.size(Y_test)*100
+        overall_default_acc+=default_acc
         
         #false positive and negative count
         false_positive = 0
@@ -193,25 +207,22 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
     print("the top ten most important features are: ")
     top =  np.argsort(feature_weight)[-8:]
     top =  np.flip(top)
-    if result_type == "mortality":
-        for idx in top:
-            print("-",data.columns[idx+3],feature_weight[idx]/t)
-    elif result_type == "expansion":
-        for idx in top:
-            print("-",data.columns[idx+3],feature_weight[idx]/t)
+    for idx in top:
+        print("-",data.columns[idx+3],feature_weight[idx]/t)
 
 
     #export graph
-    if result_type == "mortality":
-        feature_name = np.array(data.columns[3:])
-        test_name = result_type+"_"+test_type
-        class_name = ["dead","alive"]
-        visualize(chosen_clf,feature_name,class_name,test_name)
-    elif result_type == "expansion":
-        feature_name = np.array(data.columns[3:])
-        test_name = result_type+"_"+test_type
-        class_name = ["no expansion","expansion"]
-        visualize(chosen_clf,feature_name,class_name,test_name)
+    if test_type != "randomForest":
+        if result_type == "mortality":
+            feature_name = np.array(data.columns[3:])
+            test_name = result_type+"_"+test_type
+            class_name = ["dead","alive"]
+            visualize(chosen_clf,feature_name,class_name,test_name)
+        elif result_type == "expansion":
+            feature_name = np.array(data.columns[3:])
+            test_name = result_type+"_"+test_type
+            class_name = ["no expansion","expansion"]
+            visualize(chosen_clf,feature_name,class_name,test_name)
     # print(feature_name)
         
     
@@ -223,11 +234,11 @@ def find_parameters(X,Y,data,test_type,t,result_type):
     
     #calculate parameters for gini
     comparison = []
-    for md in range(3,12):
-        for msp in range(3,16):
-            for msl in range(3,16):
+    for md in range(3,7):
+        for msp in range(3,7):
+            for msl in range(3,7):
                 mlf = None
-                # print (md,msp,msl)
+                print (md,msp,msl)
                 calculated_acc,default_acc = produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf)
                 comparison.append([md,msp,msl,mlf,calculated_acc,default_acc])
         
@@ -265,11 +276,15 @@ def main():
 
     print("Gini: ")
     # find_parameters(X, Y,data,"gini",t,sys.argv[3])
-    produce_outcome(X, Y,data,"gini",t,sys.argv[3],10,15,4,None)
+    produce_outcome(X, Y,data,"gini",t,sys.argv[3],10,6,8,None)
     print("-----------------------------------------")
     print("Entropy: ")
     # find_parameters(X, Y,data,"entropy",t,sys.argv[3])
-    produce_outcome(X, Y,data,"entropy",t,sys.argv[3],3,6,4,None)
+    produce_outcome(X, Y,data,"entropy",t,sys.argv[3],3,8,8,None)
+    print("-----------------------------------------")
+    print("Random Forest: ")
+    # find_parameters(X, Y,data,"randomForest",t,sys.argv[3])
+    produce_outcome(X, Y,data,"randomForest",t,sys.argv[3],3,8,8,None)
 
     
 if __name__=="__main__": 

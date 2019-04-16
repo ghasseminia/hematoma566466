@@ -1,0 +1,39 @@
+mortality:
+Random Forest:
+average accuracy:  85.81333333333333
+average accuracy if choosing the most common:  85.50666666666666
+for  15  samples in test, there are on average  0.026 false_positives
+for  15  samples in test, there are on average  2.102 false_negatives
+for  15  samples in test, there are on average  0.072 correct_positives
+for  15  samples in test, there are on average  12.8 correct_negatives
+The prediction from the best performing model is:  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0]
+The test result from the best performing model is: [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0]
+the top ten most important features are:
+- Baseline GCS 0.13125986582900598
+- Acute_IPH_vol_MEAN 0.12726899120264018
+- Acute_IVH_MEAN 0.09396305525420984
+- Baseline NIHSS 0.08969700256428652
+- 2 hour GCS 0.0751832486566613
+- Baseline Diastolic BP 0.06316256454272194
+- Age 0.05760239459017913
+- 2 hour NIHSS 0.04449970169783476
+
+expansion:
+Random Forest:
+average accuracy:  72.44285714285712
+average accuracy if choosing the most common:  74.3285714285714
+for  14  samples in test, there are on average  0.504 false_positives
+for  14  samples in test, there are on average  3.354 false_negatives
+for  14  samples in test, there are on average  0.24 correct_positives
+for  14  samples in test, there are on average  9.902 correct_negatives
+The prediction from the best performing model is:  [1. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+The test result from the best performing model is: [1. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+the top ten most important features are:
+- 2 hour NIHSS 0.128670334133748
+- Baseline NIHSS 0.10276515952977627
+- Baseline GCS 0.07526111268952833
+- Acute_IPH_vol_MEAN 0.06520129123322496
+- Time Sx onset - CTP (hours) 0.06248404144469662
+- Time randomisation to CTP (hours) 0.05845810740575544
+- Heart Rate  0.05761700529241267
+- 2 hour GCS 0.05736014943402179
