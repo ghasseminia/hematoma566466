@@ -1,9 +1,10 @@
 import numpy as np 
 import pandas as pd 
-import sys,random
+import sys,random,graphviz
 from sklearn.metrics import confusion_matrix 
 from sklearn.model_selection import train_test_split 
 from sklearn.tree import DecisionTreeClassifier 
+from sklearn.tree import export_graphviz
 from sklearn.metrics import accuracy_score 
 from sklearn.metrics import classification_report 
 from sklearn.impute import SimpleImputer
@@ -11,7 +12,7 @@ np.set_printoptions(threshold=sys.maxsize)
 
 #--import the data--#########################
 def import_data(filename):
-    data = pd.read_excel(filename,sheet_name = 1)
+    data = pd.read_excel(filename,sheet_name = "Sheet2")
     # print("data length:", len(data))
     # print("data shape:",data.shape)
 
@@ -58,7 +59,7 @@ def set_parameter(data,result_type):
 
 #--Function to split the dataset for cross validation-- #########################
 def cross_validation_split(X,Y):
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state = random.randint(1,50000)) 
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state = random.randint(1,50000000)) 
     return X_train, X_test, Y_train, Y_test 
 
 
@@ -100,6 +101,12 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
     #the overall most impactful features
     feature_weight = np.zeros(np.shape(X)[1])
 
+    largest_correct_positive = 0
+    champion_false_negative = 20
+    champion_false_negative = 20
+    chosen_clf = None
+    chosen_Y_pred = None
+    chosen_Y_pred = None
     for i in range(t):
         X_train, X_test, Y_train, Y_test = cross_validation_split(X,Y)
         
@@ -115,6 +122,8 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
         #accuracy of prediction
         acc_single = accuracy_score(Y_test,Y_pred)*100
         overall_acc += acc_single
+
+        
 
         #default accuracy when guessing the most common
         if result_type == "mortality":
@@ -146,6 +155,30 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
         #the weight of each feature
         feature_weight += clf_obj.feature_importances_
 
+        #chose the model with the largest correct_positive and the smallest false_negative
+        if correct_positive > largest_correct_positive:
+            largest_correct_positive = correct_positive
+            champion_false_negative = false_negative
+            champion_false_positive = false_positive
+            chosen_clf = clf_obj
+            chosen_Y_pred = Y_pred
+            chosen_Y_test = Y_test
+        elif correct_positive == largest_correct_positive:
+            if false_negative < champion_false_negative:
+                largest_correct_positive = correct_positive
+                champion_false_negative = false_negative
+                champion_false_positive = false_positive
+                chosen_clf = clf_obj
+                chosen_Y_pred = Y_pred
+                chosen_Y_test = Y_test
+            elif false_negative == champion_false_negative:
+                if false_positive <= champion_false_positive:
+                    largest_correct_positive = correct_positive
+                    champion_false_negative = false_negative
+                    champion_false_positive = false_positive
+                    chosen_clf = clf_obj
+                    chosen_Y_pred = Y_pred
+                    chosen_Y_test = Y_test
 
     print("average accuracy: ",overall_acc/t)
     print("average accuracy if choosing the most common: ",overall_default_acc/t)
@@ -153,6 +186,8 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
     print("for ",np.size(Y_test)," samples in test, there are on average ",overall_false_negative/t, "false_negatives")
     print("for ",np.size(Y_test)," samples in test, there are on average ",overall_correct_positive/t, "correct_positives")
     print("for ",np.size(Y_test)," samples in test, there are on average ",overall_correct_negative/t, "correct_negatives")
+    print("The prediction from the best performing model is: ",chosen_Y_pred)
+    print("The test result from the best performing model is:",chosen_Y_test)
 
     #print the most prominent features
     print("the top ten most important features are: ")
@@ -160,10 +195,25 @@ def produce_outcome(X,Y,data,test_type,t,result_type,md,msp,msl,mlf):
     top =  np.flip(top)
     if result_type == "mortality":
         for idx in top:
-            print("-",data.columns[idx+2],feature_weight[idx]/t)
+            print("-",data.columns[idx+3],feature_weight[idx]/t)
     elif result_type == "expansion":
         for idx in top:
             print("-",data.columns[idx+3],feature_weight[idx]/t)
+
+
+    #export graph
+    if result_type == "mortality":
+        feature_name = np.array(data.columns[3:])
+        test_name = result_type+"_"+test_type
+        class_name = ["dead","alive"]
+        visualize(chosen_clf,feature_name,class_name,test_name)
+    elif result_type == "expansion":
+        feature_name = np.array(data.columns[3:])
+        test_name = result_type+"_"+test_type
+        class_name = ["no expansion","expansion"]
+        visualize(chosen_clf,feature_name,class_name,test_name)
+    # print(feature_name)
+        
     
     return overall_acc/t,overall_default_acc/t
     
@@ -188,6 +238,13 @@ def find_parameters(X,Y,data,test_type,t,result_type):
     for idx in only_acc_idx:
         print(comparison[idx])    
 
+def visualize(clf_obj,feature_name,class_name,test_name):
+    dot_data = export_graphviz(clf_obj, out_file=None, feature_names=feature_name,  filled=True, rounded=True,  special_characters=True, class_names = class_name)
+    # print(dot_data)
+    graph = graphviz.Source(dot_data)  
+    graph.render(test_name)
+    pass
+
 #--main--###########################################
 def main():
     # input data format requirement:
@@ -208,11 +265,11 @@ def main():
 
     print("Gini: ")
     # find_parameters(X, Y,data,"gini",t,sys.argv[3])
-    produce_outcome(X, Y,data,"gini",t,sys.argv[3],10,6,8,None)
+    produce_outcome(X, Y,data,"gini",t,sys.argv[3],10,15,4,None)
     print("-----------------------------------------")
     print("Entropy: ")
     # find_parameters(X, Y,data,"entropy",t,sys.argv[3])
-    produce_outcome(X, Y,data,"entropy",t,sys.argv[3],3,8,8,None)
+    produce_outcome(X, Y,data,"entropy",t,sys.argv[3],3,6,4,None)
 
     
 if __name__=="__main__": 

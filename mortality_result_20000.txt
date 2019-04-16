@@ -1,0 +1,37 @@
+Gini: 
+average accuracy:  84.69499999999901
+average accuracy if choosing the most common:  85.27300000000017
+for  15  samples in test, there are on average  1.0188 false_positives
+for  15  samples in test, there are on average  1.27695 false_negatives
+for  15  samples in test, there are on average  0.9321 correct_positives
+for  15  samples in test, there are on average  11.77215 correct_negatives
+The prediction from the best performing model is:  [0 0 0 1 1 0 0 0 1 1 0 0 1 0 1]
+The test result from the best performing model is: [0 0 0 1 1 0 0 0 1 1 0 0 0 0 0]
+the top ten most important features are: 
+- Baseline GCS 0.5699646995641081
+- Acute_IPH_vol_MEAN 0.13450846934216878
+- Acute_IVH_MEAN 0.0964228670806176
+- Time randomisation to CTP (hours) 0.05918055356354025
+- Baseline Diastolic BP 0.04584129362669813
+- Age 0.02681917650957168
+- 2 hour NIHSS 0.023446892012381235
+- 2 hour GCS 0.016338189980029158
+-----------------------------------------
+Entropy: 
+average accuracy:  82.20566666666568
+average accuracy if choosing the most common:  85.32766666666679
+for  15  samples in test, there are on average  1.11095 false_positives
+for  15  samples in test, there are on average  1.5582 false_negatives
+for  15  samples in test, there are on average  0.64265 correct_positives
+for  15  samples in test, there are on average  11.6882 correct_negatives
+The prediction from the best performing model is:  [1 1 0 0 0 1 0 1 1 0 0 1 0 0 1]
+The test result from the best performing model is: [1 1 0 0 0 0 0 1 0 0 0 1 0 0 0]
+the top ten most important features are: 
+- Acute_IPH_vol_MEAN 0.4612235895999521
+- Baseline GCS 0.21473497615029127
+- Baseline Diastolic BP 0.08260206004945193
+- Baseline Systolic BP 0.05285112316528789
+- Acute_IVH_MEAN 0.04764579312646241
+- Time randomisation to CTP (hours) 0.03610419079061245
+- Baseline NIHSS 0.020803814552877675
+- Age 0.017102852886806325

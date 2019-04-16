@@ -1,0 +1,37 @@
+Gini: 
+average accuracy:  79.03178571428494
+average accuracy if choosing the most common:  74.31321428571448
+for  14  samples in test, there are on average  0.88415 false_positives
+for  14  samples in test, there are on average  2.0514 false_negatives
+for  14  samples in test, there are on average  1.54475 correct_positives
+for  14  samples in test, there are on average  9.5197 correct_negatives
+The prediction from the best performing model is:  [0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 1. 0. 1.]
+The test result from the best performing model is: [0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 1. 0. 1.]
+the top ten most important features are: 
+- 2 hour NIHSS 0.5899725842022028
+- Time Sx onset - CTP (hours) 0.1450763341224091
+- Time randomisation to CTP (hours) 0.05935410828558333
+- Baseline NIHSS 0.05465248720335933
+- Acute_IPH_vol_MEAN 0.037497930605399236
+- Baseline Systolic BP 0.027867445814341255
+- Time Sx Onset - Randomization (hours) 0.017432306863400034
+- Age 0.0148835612226673
+-----------------------------------------
+Entropy: 
+average accuracy:  75.06535714285839
+average accuracy if choosing the most common:  74.3228571428568
+for  14  samples in test, there are on average  1.26265 false_positives
+for  14  samples in test, there are on average  2.2282 false_negatives
+for  14  samples in test, there are on average  1.3666 correct_positives
+for  14  samples in test, there are on average  9.14255 correct_negatives
+The prediction from the best performing model is:  [1. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 1.]
+The test result from the best performing model is: [1. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 1.]
+the top ten most important features are: 
+- 2 hour NIHSS 0.41851064479049865
+- Baseline NIHSS 0.14343801936494274
+- Time Sx onset - CTP (hours) 0.13665409585757396
+- Time randomisation to CTP (hours) 0.048895259752858515
+- Baseline Systolic BP 0.04393418227447539
+- Acute_IPH_vol_MEAN 0.036561978528072164
+- Age 0.02871387583661394
+- Heart Rate  0.02514578103809675
