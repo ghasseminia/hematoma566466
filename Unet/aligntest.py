@@ -7,7 +7,7 @@ from skimage.io import imsave
 import numpy as np
 import sys
 import nibabel as nib
-import math
+import matplotlib.pyplot as plt
 
 
 np.random.seed(197853) # for reproducibility
@@ -22,7 +22,7 @@ from tensorflow.keras.layers import Lambda
 from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras.utils import multi_gpu_model
 from tensorflow.keras.models import model_from_json
-# custom packages
+# custom packageshhh
 #from medo_api.core.losses import dice_coef_loss, dice_coef
 
 import tensorflow as tf
@@ -42,9 +42,9 @@ def dice_coef(y_true, y_pred, smooth=1.):
 
 
 def dice_coef_loss(y_true, y_pred):
-	return -dice_coef(y_true, y_pred, smooth=1)
+	return -dice_coef(y_true, y_pred, smooth=1e-7)
 
-def get_unet0_vert(lr=5e-5, img_row=16, img_cols=512, multigpu=1):
+def get_unet0_horiz(lr=5e-5, img_row=512, img_cols=512, multigpu=1):
 	''' Create the network model
 
 		Returns:
@@ -103,127 +103,30 @@ def get_unet0_vert(lr=5e-5, img_row=16, img_cols=512, multigpu=1):
 	return model, gpu_model
 
 
-def train_model_vert():
+def train_model_horiz():
 	print('-'*30)
 	print('Loading and preprocessing train data...')
 	print('-'*30)
 
 
-	# Load your data here
-	# X and y are numpy arrays of dimensions num_slices x height(IMG_ROWS) x width(IMG_COLS).
-	# ------------------------------------------------------------------------
-	# Input the size of your images here. You can play with these numbers.
-	IMG_ROWS = 16
-	IMG_COLS = 512
-
-	weights_filename = './weights_vert.h5'
-	architecture_filename = './model_vert.json'
-
-	#X, y = load_data
-	X = []
-	y = []
-
-	# pre_process
-	for index in range(1,25):
-		
-		scan_at_t0 = os.path.join(str(index).zfill(3) + '_acute_ICH-Measurement' + '.nii')
-		scan_at_t1 = os.path.join(str(index).zfill(3) + '_24h_ICH-Measurement' + '.nii')
-
-		try:
-			img0 = nib.load(scan_at_t0)
-			img1 = nib.load(scan_at_t1)
-		except OSError:
-			continue
-
-		img0_data = img0.get_data()
-		img1_data = img1.get_data()
-
-		img0_data_arr = np.asarray(img0_data)
-		img1_data_arr = np.asarray(img1_data)
-
-		img0_data_arr = np.rot90(img0_data_arr, 1, (2,1))
-		img1_data_arr = np.rot90(img1_data_arr, 1, (2,1))
-
-		print(img0_data_arr.shape)
-		print(img1_data_arr.shape)
-
-		tmpX = np.zeros((img0.shape[2],512), dtype=np.int16)
-		tmpy = np.zeros((img1.shape[2],512), dtype=np.int16)
-		X_slice = np.zeros((16,512), dtype=np.int16)
-		y_slice = np.zeros((16,512), dtype=np.int16)
-		y_slice_aligned = np.zeros((16,512), dtype=np.int16)
-
-		# Store info about slices with hematoma labels to help with matching
-		# [index in img, number of voxels == 1]
-		X_hematoma_slices = []
-		y_hematoma_slices = []
-		
-		for i in range(min(img0.shape[0] , img1.shape[0])):
-			tmpX[:,:]=img0_data_arr[i,:,:]
-			tmpy[:,:]=img1_data_arr[i,:,:]
-			
-			print(tmpX.shape,tmpy.shape,np.count_nonzero(tmpX[:,:]),np.count_nonzero(tmpy[:,:]))
-
-			# Check whether the slices have a label and keep track of their index and hematoma voxel count
-			if np.any(tmpX[:,:] == 1):
-				X_hematoma_slices.append([i, np.count_nonzero(tmpX[:,:])])
-			if np.any(tmpy[:,:] == 1):
-				y_hematoma_slices.append([i, np.count_nonzero(tmpy[:,:])])
-
-		# Determine the index offset to align the slices from the acute and 24h files
-		index_offset = y_hematoma_slices[0][0] - X_hematoma_slices[0][0]
-
-		#print(X_max_slice,y_max_slice,index_offset)
 	
-		for i in range(len(X_hematoma_slices)):
-			for j in range(math.ceil((img0.shape[2] - 16) / 2), math.floor((img0.shape[2] - 16) / 2) + 16):
-				X_slice[j-math.ceil((img0.shape[2] - 16) / 2),:] = img0_data_arr[X_hematoma_slices[i][0],j,:]
-			for j in range(math.ceil((img1.shape[2] - 16) / 2), math.floor((img1.shape[2] - 16) / 2) + 16):
-				y_slice[j-math.ceil((img1.shape[2] - 16) / 2),:] = img1_data_arr[X_hematoma_slices[i][0] + index_offset,j,:]
-
-			# Check that the acute and correpsonding 24h slice both have hematoma voxels
-			if np.any(X_slice[:,:] == 1) and np.any(y_slice[:,:] == 1):
-				X_indices = np.where(X_slice[:,:] == 1)
-				y_indices = np.where(y_slice[:,:] == 1)
-
-				# Find the mean coordinates of the hematoma in each slice
-				X_centre_row = np.mean(X_indices[0])
-				X_centre_col = np.mean(X_indices[1])
-				y_centre_row = np.mean(y_indices[0])
-				y_centre_col = np.mean(y_indices[1])
-
-				# Create a 24h slice that is aligned to the acute hematoma slice
-				y_slice_aligned[:,:] = np.roll(y_slice[:,:], [int(X_centre_row - y_centre_row),int(X_centre_col - y_centre_col)], axis=(0, 1))
-				growth_ratio = np.count_nonzero(y_slice_aligned[:,:]) / np.count_nonzero(X_slice[:,:])
-				overlap_ratio = np.count_nonzero(np.logical_and(X_slice[:,:],y_slice_aligned[:,:])) / np.count_nonzero(X_slice[:,:])
-
-				# Eliminate Outliers
-				if overlap_ratio > 0.1 and growth_ratio > 0.1:
-					X.append(X_slice[:,:])
-					y.append(y_slice_aligned[:,:])
-					print(np.count_nonzero(X_slice[:,:]),np.count_nonzero(y_slice_aligned[:,:]))
-
-	X = np.array(X, dtype=np.int16)
-	y = np.array(y, dtype=np.int16)
-	X = np.expand_dims(X, axis=3)
-	y = np.expand_dims(y, axis=3)
 
 	# -------------------------------------------------------------------------
 
 	print('-'*30)
 	print('Creating and compiling model...')
 	print('-'*30)
-	model, gpu_model = get_unet0_vert(lr=1e-5, img_row=IMG_ROWS, img_cols=IMG_COLS, multigpu=0)
+	model, gpu_model = get_unet0_horiz(lr=1e-5, img_row=IMG_ROWS, img_cols=IMG_COLS, multigpu=0)
 	model_checkpoint = ModelCheckpoint(weights_filename, monitor='val_loss', save_best_only=True)
 
 	# Patience: How many epochs to wait before stopping
 	# Min_delta: What is the minimum change to consider it an improvement.
-	early_stopping = EarlyStopping(monitor='val_loss', patience=1, min_delta=1E-3)
+	early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=1E-3)
 
 	print('-'*30)
 	print('Fitting model...')
 	print('-'*30)
-	model.fit(X, y, batch_size=1, epochs=1, verbose=1, shuffle=True,
+	model.fit(X, y, batch_size=1, epochs=100, verbose=1, shuffle=True,
 			  validation_split=0.2,
 			  callbacks=[model_checkpoint, early_stopping])
 
@@ -232,7 +135,7 @@ def train_model_vert():
 	with open(architecture_filename, "w") as json_file:
 		json_file.write(model_json)
 
-def predict_vert(X, weights_filename, architecture_filename):
+def predict_horiz(X, weights_filename, architecture_filename):
 	# Here we just load the model
 	with open(architecture_filename, "r") as json_file:
 		loaded_model_json_ac = json_file.read()
@@ -251,75 +154,112 @@ def predict_vert(X, weights_filename, architecture_filename):
 
 if __name__ == '__main__':
 	
-	# Uncomment this line to train the network again
-	train_model_vert()
+	# Load your data here
+	# X and y are numpy arrays of dimensions num_slices x height(IMG_ROWS) x width(IMG_COLS).
+	# ------------------------------------------------------------------------
+	# Input the size of your images here. You can play with these numbers.
+	IMG_ROWS = 512
+	IMG_COLS = 512
 
-	weights_filename = './weights_vert.h5'
-	architecture_filename = './model_vert.json'
-
-	# pre_process of the test data
+	weights_filename = './weights_horiz.h5'
+	architecture_filename = './model_horiz.json'
 
 	imgrange_start = 1
-	imgrange_end = 11
-	
-	for index in range(0,imgrange_end - imgrange_start):
-		img_slices = []
-		X_test = []
-		scan_at_t0 = os.path.join(str(index + imgrange_start).zfill(3) + '_acute_ICH-Measurement' + '.nii')
+	imgrange_end = 2
+
+	#X, y = load_data
+	X = []
+	y = []
+
+	# pre_process
+	for index in range(1,2):
+		
+		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
+		scan_at_t1 = os.path.join(str(index) + '_24h_ICH-Measurement' + '.nii')
+
 		try:
 			img0 = nib.load(scan_at_t0)
+			img1 = nib.load(scan_at_t1)
 		except OSError:
 			continue
+
 		img0_data = img0.get_data()
+		img1_data = img1.get_data()
+
 		img0_data_arr = np.asarray(img0_data)
-		img0_data_arr = np.rot90(img0_data_arr, 1, (2,1))
+		img1_data_arr = np.asarray(img1_data)
 
 		print(img0_data_arr.shape)
-		tmpX = np.zeros((img0.shape[2],512), dtype=np.int16)
+		print(img1_data_arr.shape)
 
-		img_slices = [img0_data_arr.shape, img0.header, img0.affine]
+		tmpX = np.zeros((512,512))
+		tmpy = np.zeros((512,512))
+		X_slice = np.zeros((512,512))
+		y_slice = np.zeros((512,512))
+		y_slice_aligned = np.zeros((512,512))
 
-		num_slices = 0
-		slice_indices = [-1, -1]	# [min, max]
-		for i in range(img0.shape[0]):
-			tmpX = np.zeros((img0.shape[2],512), dtype=np.int16)
-			tmpX[:,:]=img0_data_arr[i,:,:]
+		# Store info about slices with hematoma labels to help with matching
+		# [index in img, number of voxels == 1]
+		X_hematoma_slices = []
+		y_hematoma_slices = []
+		
+		for i in range(min(img0.shape[2] , img1.shape[2])):
+			tmpX[:,:]=img0_data_arr[:,:,i]
+			tmpy[:,:]=img1_data_arr[:,:,i]
 			
+			print(tmpX.shape,tmpy.shape,np.count_nonzero(tmpX[:,:]),np.count_nonzero(tmpy[:,:]))
 			if np.any(tmpX[:,:] == 1):
-				X_slice = np.zeros((16,512), dtype=np.int16)
-				for j in range(math.ceil((img0.shape[2] - 16) / 2), math.floor((img0.shape[2] - 16) / 2) + 16):
-					X_slice[j-math.ceil((img0.shape[2] - 16) / 2),:] = tmpX[j,:]
-					X_test.append(X_slice[:,:])
-				if slice_indices[0] == -1:
-					slice_indices[0] = i
-					slice_indices[1] = i
-				else:
-					slice_indices[1] = i
-				num_slices += 1
-			
-		X_test = np.array(X_test, dtype=np.int16)
-		X_test = np.expand_dims(X_test, axis=3)
+				X_hematoma_slices.append([i, np.count_nonzero(tmpX[:,:])])
+			if np.any(tmpy[:,:] == 1):
+				y_hematoma_slices.append([i, np.count_nonzero(tmpy[:,:])])
 
-		predictions = predict_vert(X_test, weights_filename, architecture_filename)
+		index_offset = y_hematoma_slices[0][0] - X_hematoma_slices[0][0]
 
-		print(predictions.shape)
+		#print(X_max_slice,y_max_slice,index_offset)
 	
-		img_pred_arr = np.zeros(img_slices[0])
+		for i in range(len(X_hematoma_slices)):
+			X_slice[:,:] = img0_data_arr[:,:,X_hematoma_slices[i][0]]
+			y_slice[:,:] = img1_data_arr[:,:,X_hematoma_slices[i][0] + index_offset]
 
-		for x in range(0, img_slices[0][0]):
-			for y in range(math.ceil((img0.shape[2] - 16) / 2), math.floor((img0.shape[2] - 16) / 2) + 16):
-				for z in range(slice_indices[0], slice_indices[0] + num_slices):
-					if predictions[z - slice_indices[0],y-math.ceil((img0.shape[2] - 16) / 2),x,0] == True:
-						img_pred_arr[z, y, x] = 1
+			if np.any(X_slice[:,:] == 1) and np.any(y_slice[:,:] == 1):
+				X_indices = np.where(X_slice[:,:] == 1)
+				y_indices = np.where(y_slice[:,:] == 1)
 
-		img_pred_arr = np.rot90(img_pred_arr, 3, (2,1))
-		
-		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[2], img_slices[1])
-		
-		if (platform.system() == 'Windows'):
-			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start).zfill(3) + '_pred_vert_image.nii'))
-		else:
-			nib.save(img_pred, os.path.join('./',str(index + imgrange_start).zfill(3) + '_pred_vert_image.nii'))
+				X_centre_row = np.mean(X_indices[0])
+				X_centre_col = np.mean(X_indices[1])
+				y_centre_row = np.mean(y_indices[0])
+				y_centre_col = np.mean(y_indices[1])
+
+				y_slice_aligned[:,:] = np.roll(y_slice[:,:], [int(X_centre_row - y_centre_row),int(X_centre_col - y_centre_col)], axis=(0, 1))
+				growth_ratio = np.count_nonzero(y_slice_aligned[:,:]) / np.count_nonzero(X_slice[:,:])
+				overlap_ratio = np.count_nonzero(np.logical_and(X_slice[:,:],y_slice_aligned[:,:])) / np.count_nonzero(X_slice[:,:])
+
+				plt.imshow(X_slice[:,:])
+				plt.imshow(y_slice[:,:])
+
+				# Eliminate Outliers
+				#if overlap_ratio > 0.1 and growth_ratio > 0.1:
+				print(np.count_nonzero(X_slice[:,:]),np.count_nonzero(y_slice_aligned[:,:]))
+
+				X = np.array(X, dtype=np.int16)
+				y = np.array(y, dtype=np.int16)
+				print(X.shape)
+				print(y.shape)
+				
+				X = np.transpose(X, (1, 2, 0))
+				y = np.transpose(y, (1, 2, 0))
+
+				print(X.shape)
+				print(y.shape)
+				
+				img_X = nib.Nifti1Image(X, img0.affine, img0.header)
+				img_y = nib.Nifti1Image(y, img0.affine, img0.header)
+	
+				if (platform.system() == 'Windows'):
+					nib.save(img_X, os.path.join('.\\',str(index + imgrange_start + 100) + '_align_image.nii'))
+					nib.save(img_y, os.path.join('.\\',str(index + imgrange_start + 200) + '_align_image.nii'))
+				else:
+					nib.save(img_X, os.path.join('./',str(index + imgrange_start) + '_align_image.nii'))
 
 
 	# We need to read back the values and reconstruct the images.

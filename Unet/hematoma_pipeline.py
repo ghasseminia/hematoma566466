@@ -58,7 +58,7 @@ if __name__ == '__main__':
 		img_slices = []
 		X_test_horiz = []
 		X_test_vert = []
-		scan_at_t0 = os.path.join(str(index + imgrange_start) + '_2h_ICH-Measurement' + '.nii')
+		scan_at_t0 = os.path.join(str(index + imgrange_start).zfill(3) + '_acute_ICH-Measurement' + '.nii')
 		try:
 			img0 = nib.load(scan_at_t0)
 		except OSError:
@@ -79,10 +79,12 @@ if __name__ == '__main__':
 
 		num_slices = 0
 		slice_indices = [-1, -1]	# [min, max]
+		# Go through all slices in the label file
 		for i in range(img0.shape[2]):
 			tmpX_horiz = np.zeros((512,512), dtype=np.int16)
 			tmpX_horiz[:,:]=img0_data_arr_horiz[:,:,i]
 			
+			# Find slices with hematoma voxels
 			if np.any(tmpX_horiz[:,:] == 1):
 				X_test_horiz.append(tmpX_horiz[:,:])
 				if slice_indices[0] == -1:
@@ -99,6 +101,7 @@ if __name__ == '__main__':
 	
 		img_pred_arr_horiz = np.zeros(img_slices[0])
 
+		# Fill array with results of prediction
 		for x in range(0, img_slices[0][0]):
 			for y in range(0, img_slices[0][1]):
 				for z in range(slice_indices[0], slice_indices[0] + num_slices):
@@ -115,10 +118,13 @@ if __name__ == '__main__':
 
 		num_slices = 0
 		slice_indices = [-1, -1]	# [min, max]
+
+		# Go through all slices in the label file
 		for i in range(img0.shape[0]):
 			tmpX_vert = np.zeros((img0.shape[2],512), dtype=np.int16)
 			tmpX_vert[:,:]=img0_data_arr_vert[i,:,:]
 			
+			# Find slices with hematoma voxels
 			if np.any(tmpX_vert[:,:] == 1):
 				X_slice = np.zeros((16,512), dtype=np.int16)
 				for j in range(math.ceil((img0.shape[2] - 16) / 2), math.floor((img0.shape[2] - 16) / 2) + 16):
@@ -138,6 +144,7 @@ if __name__ == '__main__':
 	
 		img_pred_arr_vert = np.zeros(img_slices[0])
 
+		# Fill array with results of prediction
 		for x in range(0, img_slices[0][0]):
 			for y in range(math.ceil((img0.shape[2] - 16) / 2), math.floor((img0.shape[2] - 16) / 2) + 16):
 				for z in range(slice_indices[0], slice_indices[0] + num_slices):
@@ -151,8 +158,8 @@ if __name__ == '__main__':
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[2], img_slices[1])
 		
 		if (platform.system() == 'Windows'):
-			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
+			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start).zfill(3) + '_pred_image.nii'))
 		else:
-			nib.save(img_pred, os.path.join('./',str(index + imgrange_start) + '_pred_image.nii'))
+			nib.save(img_pred, os.path.join('./',str(index + imgrange_start).zfill(3) + '_pred_image.nii'))
 
 	# We also need to measure the performance

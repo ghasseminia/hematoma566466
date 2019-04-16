@@ -106,3 +106,4 @@ venv.bak/
 # weights and labels
 Unet/*.h5
 Unet/*.nii
+Unet/out.txt

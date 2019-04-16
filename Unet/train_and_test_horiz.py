@@ -7,6 +7,7 @@ from skimage.io import imsave
 import numpy as np
 import sys
 import nibabel as nib
+import matplotlib.pyplot as plt
 
 
 np.random.seed(197853) # for reproducibility
@@ -41,7 +42,7 @@ def dice_coef(y_true, y_pred, smooth=1.):
 
 
 def dice_coef_loss(y_true, y_pred):
-	return -dice_coef(y_true, y_pred, smooth=1.)
+	return -dice_coef(y_true, y_pred, smooth=1e-7)
 
 def get_unet0_horiz(lr=5e-5, img_row=512, img_cols=512, multigpu=1):
 	''' Create the network model
@@ -123,10 +124,10 @@ def train_model_horiz():
 	y = []
 
 	# pre_process
-	for index in range(1,25):
+	for index in range(1,48):
 		
-		scan_at_t0 = os.path.join(str(index) + '_2h_ICH-Measurement' + '.nii')
-		scan_at_t1 = os.path.join(str(index) + '_24h_ICH-Measurement' + '.nii')
+		scan_at_t0 = os.path.join(str(index).zfill(3)  + '_acute_ICH-Measurement' + '.nii')
+		scan_at_t1 = os.path.join(str(index).zfill(3) + '_24h_ICH-Measurement' + '.nii')
 
 		try:
 			img0 = nib.load(scan_at_t0)
@@ -159,11 +160,14 @@ def train_model_horiz():
 			tmpy[:,:]=img1_data_arr[:,:,i]
 			
 			print(tmpX.shape,tmpy.shape,np.count_nonzero(tmpX[:,:]),np.count_nonzero(tmpy[:,:]))
+
+			# Check whether the slices have a label and keep track of their index and hematoma voxel count
 			if np.any(tmpX[:,:] == 1):
 				X_hematoma_slices.append([i, np.count_nonzero(tmpX[:,:])])
 			if np.any(tmpy[:,:] == 1):
 				y_hematoma_slices.append([i, np.count_nonzero(tmpy[:,:])])
 
+		# Determine the index offset to align the slices from the acute and 24h files
 		index_offset = y_hematoma_slices[0][0] - X_hematoma_slices[0][0]
 
 		#print(X_max_slice,y_max_slice,index_offset)
@@ -172,23 +176,30 @@ def train_model_horiz():
 			X_slice[:,:] = img0_data_arr[:,:,X_hematoma_slices[i][0]]
 			y_slice[:,:] = img1_data_arr[:,:,X_hematoma_slices[i][0] + index_offset]
 
+			# Check that the acute and correpsonding 24h slice both have hematoma voxels
 			if np.any(X_slice[:,:] == 1) and np.any(y_slice[:,:] == 1):
 				X_indices = np.where(X_slice[:,:] == 1)
 				y_indices = np.where(y_slice[:,:] == 1)
 
+				# Find the mean coordinates of the hematoma in each slice
 				X_centre_row = np.mean(X_indices[0])
 				X_centre_col = np.mean(X_indices[1])
 				y_centre_row = np.mean(y_indices[0])
 				y_centre_col = np.mean(y_indices[1])
 
+				# Create a 24h slice that is aligned to the acute hematoma slice
 				y_slice_aligned[:,:] = np.roll(y_slice[:,:], [int(X_centre_row - y_centre_row),int(X_centre_col - y_centre_col)], axis=(0, 1))
 				growth_ratio = np.count_nonzero(y_slice_aligned[:,:]) / np.count_nonzero(X_slice[:,:])
 				overlap_ratio = np.count_nonzero(np.logical_and(X_slice[:,:],y_slice_aligned[:,:])) / np.count_nonzero(X_slice[:,:])
 
 				# Eliminate Outliers
-				if overlap_ratio > 0.3 and growth_ratio > 0.5:
+				if overlap_ratio > 0.1 and growth_ratio > 0.1:
 					X.append(X_slice[:,:])
 					y.append(y_slice_aligned[:,:])
+					print("***" + str(index) + "***")
+					#plt.matshow(X_slice[:,:])
+					#plt.matshow(y_slice_aligned[:,:])
+					#plt.show()
 					print(np.count_nonzero(X_slice[:,:]),np.count_nonzero(y_slice_aligned[:,:]))
 
 	X = np.array(X, dtype=np.int16)
@@ -247,13 +258,13 @@ if __name__ == '__main__':
 
 	# pre_process of the test data
 
-	imgrange_start = 1
-	imgrange_end = 11
+	imgrange_start = 2
+	imgrange_end = 3
 	
 	for index in range(0,imgrange_end - imgrange_start):
 		img_slices = []
 		X_test = []
-		scan_at_t0 = os.path.join(str(index + imgrange_start) + '_2h_ICH-Measurement' + '.nii')
+		scan_at_t0 = os.path.join(str(index + imgrange_start).zfill(3) + '_acute_ICH-Measurement' + '.nii')
 		try:
 			img0 = nib.load(scan_at_t0)
 		except OSError:
@@ -297,9 +308,9 @@ if __name__ == '__main__':
 		img_pred = nib.Nifti1Image(img_pred_arr, img_slices[2], img_slices[1])
 		
 		if (platform.system() == 'Windows'):
-			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start) + '_pred_image.nii'))
+			nib.save(img_pred, os.path.join('.\\',str(index + imgrange_start).zfill(3) + '_pred_horiz_image.nii'))
 		else:
-			nib.save(img_pred, os.path.join('./',str(index + imgrange_start) + '_pred_image.nii'))
+			nib.save(img_pred, os.path.join('./',str(index + imgrange_start).zfill(3) + '_pred_horiz_image.nii'))
 
 
 	# We need to read back the values and reconstruct the images.
