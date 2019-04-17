@@ -124,7 +124,7 @@ def train_model_horiz():
 	y = []
 
 	# pre_process
-	for index in range(1,48):
+	for index in range(1,33):
 		
 		scan_at_t0 = os.path.join(str(index).zfill(3)  + '_acute_ICH-Measurement' + '.nii')
 		scan_at_t1 = os.path.join(str(index).zfill(3) + '_24h_ICH-Measurement' + '.nii')
@@ -188,15 +188,18 @@ def train_model_horiz():
 				y_centre_col = np.mean(y_indices[1])
 
 				# Create a 24h slice that is aligned to the acute hematoma slice
-				y_slice_aligned[:,:] = np.roll(y_slice[:,:], [int(X_centre_row - y_centre_row),int(X_centre_col - y_centre_col)], axis=(0, 1))
-				growth_ratio = np.count_nonzero(y_slice_aligned[:,:]) / np.count_nonzero(X_slice[:,:])
-				overlap_ratio = np.count_nonzero(np.logical_and(X_slice[:,:],y_slice_aligned[:,:])) / np.count_nonzero(X_slice[:,:])
+				try:
+					y_slice_aligned[:,:] = np.roll(y_slice[:,:], [int(X_centre_row - y_centre_row),int(X_centre_col - y_centre_col)], axis=(0, 1))
+					growth_ratio = np.count_nonzero(y_slice_aligned[:,:]) / np.count_nonzero(X_slice[:,:])
+					overlap_ratio = np.count_nonzero(np.logical_and(X_slice[:,:],y_slice_aligned[:,:])) / np.count_nonzero(X_slice[:,:])
+				except:
+					y_slice_aligned[:,:] = np.zeros((512,512))
 
 				# Eliminate Outliers
-				if overlap_ratio > 0.1 and growth_ratio > 0.1:
+				if overlap_ratio > 0.1 and growth_ratio < 3 and growth_ratio > 0.5:
 					X.append(X_slice[:,:])
 					y.append(y_slice_aligned[:,:])
-					print("***" + str(index) + "***")
+					#print("***" + str(index) + "***")
 					#plt.matshow(X_slice[:,:])
 					#plt.matshow(y_slice_aligned[:,:])
 					#plt.show()
@@ -217,12 +220,12 @@ def train_model_horiz():
 
 	# Patience: How many epochs to wait before stopping
 	# Min_delta: What is the minimum change to consider it an improvement.
-	early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=1E-3)
+	early_stopping = EarlyStopping(monitor='val_loss', patience=60, min_delta=1E-6)
 
 	print('-'*30)
 	print('Fitting model...')
 	print('-'*30)
-	model.fit(X, y, batch_size=1, epochs=100, verbose=1, shuffle=True,
+	model.fit(X, y, batch_size=1, epochs=300, verbose=1, shuffle=True,
 			  validation_split=0.2,
 			  callbacks=[model_checkpoint, early_stopping])
 
@@ -251,15 +254,15 @@ def predict_horiz(X, weights_filename, architecture_filename):
 if __name__ == '__main__':
 	
 	# Uncomment this line to train the network again
-	train_model_horiz()
+	#train_model_horiz()
 
 	weights_filename = './weights_horiz.h5'
 	architecture_filename = './model_horiz.json'
 
 	# pre_process of the test data
 
-	imgrange_start = 2
-	imgrange_end = 3
+	imgrange_start = 1
+	imgrange_end = 33
 	
 	for index in range(0,imgrange_end - imgrange_start):
 		img_slices = []
